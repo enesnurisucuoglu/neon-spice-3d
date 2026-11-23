@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, GripHorizontal } from 'lucide-react';
+import { AlertCircle, CheckCircle2, GripHorizontal, RotateCw } from 'lucide-react';
 import {
   AnalysisConfig,
   AnalysisType,
@@ -27,6 +27,7 @@ import {
   computeGuidedSteps,
   createEmptyLevelSchematic,
 } from './data/academyGuidedEngine';
+import { COMPONENT_GUIDE } from './data/componentGuide';
 import { getComponentPrefix, getDefaultParams } from './utils/format';
 import { ComponentPalette, Toolbar, ViewMode } from './components/Toolbar';
 import { SchematicCanvas, SelectionTarget, ToolMode } from './components/SchematicCanvas';
@@ -98,6 +99,7 @@ export default function App() {
   const [toolMode, setToolMode] = useState<ToolMode>('select');
   // Default to Cities: Skylines-style Top-Down 3D PCB View!
   const [viewMode, setViewMode] = useState<ViewMode>('3d');
+  const [scopeVisibleIn3D, setScopeVisibleIn3D] = useState(false);
   const [placingType, setPlacingType] = useState<ComponentType>('resistor');
   const [placingRotation, setPlacingRotation] = useState<Rotation>(0);
   const [selection, setSelection] = useState<SelectionTarget>(null);
@@ -449,7 +451,7 @@ export default function App() {
       } else if ((e.key === 'w' || e.key === 'W') && (viewMode === '2d' || e.shiftKey)) {
         // Bare 'w' only activates Wire tool in pure 2D mode so WASD always moves the 3D camera in 3D & Split views!
         setToolMode('wire');
-      } else if (e.key === 'r' || e.key === 'R') {
+      } else if (e.key === 'r' || e.key === 'R' || e.code === 'KeyR') {
         if (toolMode === 'place') {
           handleRotatePlacing();
         } else if (selection?.kind === 'component') {
@@ -582,105 +584,235 @@ export default function App() {
             overflow: 'hidden',
           }}
         >
-          {/* Top: 3D PCB Lab (default) / Split 2D + 3D / 2D Schematic */}
-          <div
-            style={{
-              height: `${splitRatio * 100}%`,
-              minHeight: 160,
-              position: 'relative',
-              display: 'flex',
-              minWidth: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {(viewMode === '2d' || viewMode === 'split') && (
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  height: '100%',
-                  position: 'relative',
-                  borderRight: viewMode === 'split' ? '1px solid var(--border-strong)' : 'none',
-                }}
-              >
-                <SchematicCanvas
-                  schematic={schematic}
-                  netlist={netlist}
-                  dcOpResult={dcOpResult}
-                  toolMode={toolMode}
-                  placingType={placingType}
-                  placingRotation={placingRotation}
-                  selection={selection}
-                  onSelect={setSelection}
-                  onMoveComponent={handleMoveComponent}
-                  onAddWireSegments={handleAddWireSegments}
-                  onPlaceComponent={handlePlaceComponent}
-                  onPlaceProbe={handlePlaceProbe}
-                  onDeleteTarget={handleDeleteTarget}
-                  onRotatePlacing={handleRotatePlacing}
-                />
-              </div>
-            )}
+          {/* Top: 3D PCB Lab (full-panel default) / Split 2D + 3D / 2D Schematic */}
+          {(() => {
+            const showOscilloscope = viewMode !== '3d' || scopeVisibleIn3D;
+            const selectedComp =
+              selection?.kind === 'component'
+                ? schematic.components.find((c) => c.id === selection.id) ?? null
+                : null;
+            return (
+              <>
+                <div
+                  style={{
+                    height: showOscilloscope ? `${splitRatio * 100}%` : '100%',
+                    flex: showOscilloscope ? undefined : 1,
+                    minHeight: 160,
+                    position: 'relative',
+                    display: 'flex',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {(viewMode === '2d' || viewMode === 'split') && (
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: '100%',
+                        position: 'relative',
+                        borderRight: viewMode === 'split' ? '1px solid var(--border-strong)' : 'none',
+                      }}
+                    >
+                      <SchematicCanvas
+                        schematic={schematic}
+                        netlist={netlist}
+                        dcOpResult={dcOpResult}
+                        toolMode={toolMode}
+                        placingType={placingType}
+                        placingRotation={placingRotation}
+                        selection={selection}
+                        onSelect={setSelection}
+                        onMoveComponent={handleMoveComponent}
+                        onAddWireSegments={handleAddWireSegments}
+                        onPlaceComponent={handlePlaceComponent}
+                        onPlaceProbe={handlePlaceProbe}
+                        onDeleteTarget={handleDeleteTarget}
+                        onRotatePlacing={handleRotatePlacing}
+                      />
+                    </div>
+                  )}
 
-            {(viewMode === '3d' || viewMode === 'split') && (
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  height: '100%',
-                  position: 'relative',
-                }}
-              >
-                <Circuit3DView
-                  schematic={schematic}
-                  netlist={netlist}
-                  dcOpResult={dcOpResult}
-                  selectedComponentId={selection?.kind === 'component' ? selection.id : null}
-                  onSelectComponent={(compId) =>
-                    setSelection(compId ? { kind: 'component', id: compId } : null)
-                  }
-                  toolMode={toolMode}
-                  placingType={placingType}
-                  placingRotation={placingRotation}
-                  guidedTarget={guidedTarget}
-                  onMoveComponent={handleMoveComponent}
-                  onAddWireSegments={handleAddWireSegments}
-                  onPlaceComponent={handlePlaceComponent}
-                  onPlaceProbe={handlePlaceProbe}
-                  onDeleteTarget={handleDeleteTarget}
-                  onRotatePlacing={handleRotatePlacing}
-                />
-              </div>
-            )}
-          </div>
+                  {(viewMode === '3d' || viewMode === 'split') && (
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: '100%',
+                        position: 'relative',
+                      }}
+                    >
+                      <Circuit3DView
+                        schematic={schematic}
+                        netlist={netlist}
+                        dcOpResult={dcOpResult}
+                        selectedComponentId={selection?.kind === 'component' ? selection.id : null}
+                        onSelectComponent={(compId) =>
+                          setSelection(compId ? { kind: 'component', id: compId } : null)
+                        }
+                        toolMode={toolMode}
+                        placingType={placingType}
+                        placingRotation={placingRotation}
+                        guidedTarget={guidedTarget}
+                        onMoveComponent={handleMoveComponent}
+                        onAddWireSegments={handleAddWireSegments}
+                        onPlaceComponent={handlePlaceComponent}
+                        onPlaceProbe={handlePlaceProbe}
+                        onDeleteTarget={handleDeleteTarget}
+                        onRotatePlacing={handleRotatePlacing}
+                      />
+                      {viewMode === '3d' && (
+                        <button
+                          onClick={() => setScopeVisibleIn3D((v) => !v)}
+                          title={scopeVisibleIn3D ? 'Osiloskopu Gizle (Tam Ekran 3D)' : 'Osiloskopu Altta Göster'}
+                          style={{
+                            position: 'absolute',
+                            right: 12,
+                            bottom: 12,
+                            zIndex: 20,
+                            padding: '6px 12px',
+                            borderRadius: 8,
+                            background: scopeVisibleIn3D
+                              ? 'rgba(34, 211, 238, 0.22)'
+                              : 'rgba(15, 23, 42, 0.88)',
+                            border: `1px solid ${
+                              scopeVisibleIn3D ? 'rgba(34, 211, 238, 0.6)' : 'rgba(148, 163, 184, 0.35)'
+                            }`,
+                            color: scopeVisibleIn3D ? '#67e8f9' : '#e2e8f0',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            backdropFilter: 'blur(8px)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                          }}
+                        >
+                          {scopeVisibleIn3D ? 'Tam Ekran 3D' : 'Osiloskopu Göster'}
+                        </button>
+                      )}
+                    </div>
+                  )}
 
-          {/* Draggable Horizontal Divider */}
-          <div
-            onMouseDown={() => {
-              isResizingRef.current = true;
-              document.body.style.cursor = 'row-resize';
-            }}
-            title="Şema / Osiloskop oranını sürükleyerek ayarlayın"
-            style={{
-              height: 8,
-              flexShrink: 0,
-              background: 'var(--bg-panel)',
-              borderTop: '1px solid var(--border-subtle)',
-              borderBottom: '1px solid var(--border-subtle)',
-              cursor: 'row-resize',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <GripHorizontal size={15} />
-          </div>
+                  {/* Floating Bottom-Center Context Action Pill (Rotate 90°, Place, Drag, Wire hints) */}
+                  {(toolMode === 'place' || toolMode === 'wire' || selectedComp) && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        bottom: 14,
+                        transform: 'translateX(-50%)',
+                        zIndex: 25,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '7px 14px',
+                        borderRadius: 999,
+                        background: 'rgba(11, 18, 32, 0.92)',
+                        border: '1px solid rgba(34, 211, 238, 0.5)',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.55)',
+                        backdropFilter: 'blur(10px)',
+                        color: '#f1f5f9',
+                        fontSize: 12.5,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {toolMode === 'place' ? (
+                        <>
+                          <span style={{ fontWeight: 700, color: '#67e8f9' }}>
+                            {COMPONENT_GUIDE[placingType]?.title ?? placingType}
+                          </span>
+                          <span style={{ color: '#94a3b8' }}>•</span>
+                          <span>Sol Tık: Yerleştir</span>
+                          <button
+                            onClick={handleRotatePlacing}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              padding: '4px 10px',
+                              borderRadius: 999,
+                              background: 'rgba(34, 211, 238, 0.2)',
+                              border: '1px solid rgba(34, 211, 238, 0.65)',
+                              color: '#67e8f9',
+                              fontWeight: 700,
+                              fontSize: 12,
+                            }}
+                          >
+                            <RotateCw size={13} />
+                            90° Döndür (R / Sağ Tık) · {placingRotation}°
+                          </button>
+                          <span style={{ color: '#94a3b8', fontSize: 11.5 }}>Esc: İptal</span>
+                        </>
+                      ) : toolMode === 'wire' ? (
+                        <>
+                          <span style={{ fontWeight: 700, color: '#34d399' }}>Kablo Çizimi</span>
+                          <span style={{ color: '#94a3b8' }}>•</span>
+                          <span>1. Tık: Başla · 2. Tık: Bağla · Sağ Tık / Esc: İptal</span>
+                        </>
+                      ) : selectedComp ? (
+                        <>
+                          <span style={{ fontWeight: 700, color: '#67e8f9' }}>
+                            {selectedComp.name} ({selectedComp.rotation}°)
+                          </span>
+                          <span style={{ color: '#94a3b8' }}>•</span>
+                          <span>Sürükle: Taşı</span>
+                          <button
+                            onClick={() => handleRotateComponent(selectedComp.id)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              padding: '4px 10px',
+                              borderRadius: 999,
+                              background: 'rgba(34, 211, 238, 0.2)',
+                              border: '1px solid rgba(34, 211, 238, 0.65)',
+                              color: '#67e8f9',
+                              fontWeight: 700,
+                              fontSize: 12,
+                            }}
+                          >
+                            <RotateCw size={13} />
+                            90° Döndür (R)
+                          </button>
+                          <span style={{ color: '#94a3b8', fontSize: 11.5 }}>Del: Sil</span>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
 
-          {/* Bottom: Oscilloscope / Bode / DC Table */}
-          <div style={{ flex: 1, minHeight: 140, overflow: 'hidden' }}>
-            <Oscilloscope result={simResult} probes={schematic.probes} error={simError} />
-          </div>
+                {showOscilloscope && (
+                  <>
+                    {/* Draggable Horizontal Divider */}
+                    <div
+                      onMouseDown={() => {
+                        isResizingRef.current = true;
+                        document.body.style.cursor = 'row-resize';
+                      }}
+                      title="Şema / Osiloskop oranını sürükleyerek ayarlayın"
+                      style={{
+                        height: 8,
+                        flexShrink: 0,
+                        background: 'var(--bg-panel)',
+                        borderTop: '1px solid var(--border-subtle)',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        cursor: 'row-resize',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      <GripHorizontal size={15} />
+                    </div>
+
+                    {/* Bottom: Oscilloscope / Bode / DC Table */}
+                    <div style={{ flex: 1, minHeight: 140, overflow: 'hidden' }}>
+                      <Oscilloscope result={simResult} probes={schematic.probes} error={simError} />
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Right Sidebar: Inspector / Netlist / Theory */}
