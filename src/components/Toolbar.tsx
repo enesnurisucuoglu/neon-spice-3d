@@ -431,6 +431,8 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
 export interface ComponentPaletteProps {
   toolMode: ToolMode;
   placingType: ComponentType;
+  highlightedComponentType?: ComponentType | null;
+  highlightedTool?: ToolMode | null;
   onSelectTool: (mode: ToolMode) => void;
   onSelectPlacingType: (type: ComponentType) => void;
 }
@@ -498,15 +500,25 @@ const PALETTE_GROUPS: { title: string; items: PaletteItem[] }[] = [
 export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
   toolMode,
   placingType,
+  highlightedComponentType = null,
+  highlightedTool = null,
   onSelectTool,
   onSelectPlacingType,
 }) => {
   const [filter, setFilter] = useState('');
   const [hoveredType, setHoveredType] = useState<ComponentType | null>(null);
+
+  // Auto-clear search filter if a tutorial step highlights a component
+  React.useEffect(() => {
+    if (highlightedComponentType) {
+      setFilter('');
+    }
+  }, [highlightedComponentType]);
+
   const q = filter.trim().toLowerCase();
 
   const activeGuideType: ComponentType | null =
-    hoveredType ?? (toolMode === 'place' ? placingType : null);
+    hoveredType ?? highlightedComponentType ?? (toolMode === 'place' ? placingType : null);
   const guideEntry = activeGuideType ? COMPONENT_GUIDE[activeGuideType] : null;
 
   return (
@@ -541,6 +553,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
             <ToolButton
               active={toolMode === 'select'}
+              highlighted={highlightedTool === 'select' && toolMode !== 'select'}
               title="Seç & Taşı (Esc)"
               label="SEL"
               onClick={() => onSelectTool('select')}
@@ -550,6 +563,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
 
             <ToolButton
               active={toolMode === 'wire'}
+              highlighted={highlightedTool === 'wire' && toolMode !== 'wire'}
               title="Kablo Çek (2D: W veya Shift+W)"
               label="WIRE"
               accent="#34d399"
@@ -560,6 +574,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
 
             <ToolButton
               active={toolMode === 'probe'}
+              highlighted={highlightedTool === 'probe' && toolMode !== 'probe'}
               title="Voltaj Probu Yerleştir"
               label="PRB"
               accent="#fbbf24"
@@ -570,6 +585,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
 
             <ToolButton
               active={toolMode === 'delete'}
+              highlighted={highlightedTool === 'delete' && toolMode !== 'delete'}
               title="Silme Aracı (Delete)"
               label="DEL"
               accent="#fb7185"
@@ -628,6 +644,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
                 {items.map((item) => {
                   const active = toolMode === 'place' && placingType === item.type;
+                  const isHighlighted = highlightedComponentType === item.type && !active;
                   return (
                     <button
                       key={item.type}
@@ -636,22 +653,54 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
                       onMouseEnter={() => setHoveredType(item.type)}
                       onMouseLeave={() => setHoveredType(null)}
                       style={{
+                        position: 'relative',
                         height: 31,
                         borderRadius: 6,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: active ? 'rgba(34, 211, 238, 0.2)' : 'var(--bg-panel-alt)',
-                        border: `1px solid ${active ? 'var(--accent-cyan)' : 'var(--border-subtle)'}`,
-                        color: active ? 'var(--accent-cyan)' : item.accent,
+                        background: active
+                          ? 'rgba(34, 211, 238, 0.22)'
+                          : isHighlighted
+                          ? 'rgba(52, 211, 153, 0.22)'
+                          : 'var(--bg-panel-alt)',
+                        border: `1.5px solid ${
+                          active
+                            ? 'var(--accent-cyan)'
+                            : isHighlighted
+                            ? '#34d399'
+                            : 'var(--border-subtle)'
+                        }`,
+                        color: active ? 'var(--accent-cyan)' : isHighlighted ? '#fef08a' : item.accent,
                         fontSize: 11.5,
                         fontWeight: 700,
                         fontFamily: 'var(--font-mono)',
                         letterSpacing: '-0.01em',
                         transition: 'all 0.1s ease',
+                        animation: isHighlighted ? 'neonPulse 1.3s ease-in-out infinite' : undefined,
                       }}
                     >
                       {item.short}
+                      {isHighlighted && (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            top: -7,
+                            right: -4,
+                            padding: '0 4px',
+                            borderRadius: 4,
+                            fontSize: 8,
+                            fontWeight: 800,
+                            background: '#34d399',
+                            color: '#051018',
+                            letterSpacing: '0.03em',
+                            lineHeight: '13px',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                          }}
+                        >
+                          SEÇ
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -738,29 +787,58 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 const ToolButton: React.FC<{
   active: boolean;
+  highlighted?: boolean;
   title: string;
   label: string;
   accent?: string;
   onClick: () => void;
   children: React.ReactNode;
-}> = ({ active, title, label, accent = '#22d3ee', onClick, children }) => (
+}> = ({ active, highlighted = false, title, label, accent = '#22d3ee', onClick, children }) => (
   <button
     title={title}
     onClick={onClick}
     style={{
+      position: 'relative',
       height: 33,
       borderRadius: 6,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 4,
-      background: active ? `${accent}24` : 'var(--bg-panel-alt)',
-      border: `1px solid ${active ? accent : 'var(--border-subtle)'}`,
-      color: active ? accent : 'var(--text-secondary)',
+      background: active
+        ? `${accent}24`
+        : highlighted
+        ? 'rgba(52, 211, 153, 0.22)'
+        : 'var(--bg-panel-alt)',
+      border: `1.5px solid ${
+        active ? accent : highlighted ? '#34d399' : 'var(--border-subtle)'
+      }`,
+      color: active ? accent : highlighted ? '#fef08a' : 'var(--text-secondary)',
       transition: 'all 0.1s ease',
+      animation: highlighted ? 'neonPulse 1.3s ease-in-out infinite' : undefined,
     }}
   >
     {children}
     <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>{label}</span>
+    {highlighted && (
+      <span
+        style={{
+          position: 'absolute',
+          top: -7,
+          right: -4,
+          padding: '0 4px',
+          borderRadius: 4,
+          fontSize: 8,
+          fontWeight: 800,
+          background: '#34d399',
+          color: '#051018',
+          letterSpacing: '0.03em',
+          lineHeight: '13px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+        }}
+      >
+        SEÇ
+      </span>
+    )}
   </button>
 );

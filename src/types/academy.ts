@@ -1,14 +1,51 @@
 import {
   AnalysisConfig,
+  CircuitComponent,
   CircuitSchematic,
+  ComponentType,
   DCOPResult,
+  Rotation,
   SimulationResult,
+  Wire,
 } from './circuit';
+
+export type AcademyMode = 'tutorial' | 'challenge';
 
 export interface LevelCheckResult {
   passed: boolean;
   summary: string;
   details: { label: string; actual: string; target: string; ok: boolean }[];
+}
+
+export interface LevelQuizQuestion {
+  question: string;
+  options: [string, string, string, string];
+  correctIndex: 0 | 1 | 2 | 3;
+  explanation: string;
+}
+
+export interface GuidedTargetGhost {
+  kind: 'component' | 'wire' | 'probe';
+  componentType?: ComponentType;
+  x?: number;
+  y?: number;
+  rotation?: Rotation;
+  label?: string;
+  wires?: Wire[];
+}
+
+export interface GuidedStep {
+  id: string;
+  kind: 'place_component' | 'set_param' | 'add_wires' | 'add_probe' | 'verify';
+  title: string;
+  instruction: string;
+  completed: boolean;
+  highlightedTool?: 'select' | 'wire' | 'place' | 'probe';
+  highlightedComponentType?: ComponentType;
+  targetComponentName?: string;
+  targetGhost?: GuidedTargetGhost;
+  /** Optional target component from solution for quick comparison */
+  solutionComponent?: CircuitComponent;
 }
 
 export interface AcademyLevel {
@@ -27,9 +64,9 @@ export interface AcademyLevel {
   hint: string;
   /** Real-world breadboard / practical engineering note */
   realWorldNote: string;
-  /** Starter circuit loaded when the user opens this level */
+  /** Starter circuit (used for quick parameter practice or reference) */
   starterSchematic: CircuitSchematic;
-  /** Verified solution circuit (used for "Çözümü Göster" and automated 50/50 SPICE tests) */
+  /** Verified solution circuit (blueprint for empty-board guided building & automated 50/50 SPICE tests) */
   solutionSchematic: CircuitSchematic;
   /** Analysis mode used to grade this level */
   verificationAnalysis: AnalysisConfig;
@@ -43,6 +80,9 @@ export interface AcademyLevel {
 
 export interface AcademyProgress {
   completedIds: number[];
+  challengeCompletedIds: number[];
+  quizPassedIds: number[];
   currentLevelId: number;
+  mode: AcademyMode;
   lastUpdated: string;
 }

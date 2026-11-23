@@ -92,12 +92,27 @@ export function getLevelById(id: number): AcademyLevel | undefined {
   return ACADEMY_LEVELS.find((level) => level.id === id);
 }
 
-const PROGRESS_STORAGE_KEY = 'neonspice_academy_progress_v1';
+const PROGRESS_STORAGE_KEY = 'neonspice_academy_progress_v2';
+
+function sanitizeIdList(arr: unknown): number[] {
+  if (!Array.isArray(arr)) return [];
+  return Array.from(
+    new Set(
+      arr.filter(
+        (n): n is number =>
+          typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 50
+      )
+    )
+  ).sort((a, b) => a - b);
+}
 
 function createDefaultProgress(): AcademyProgress {
   return {
     completedIds: [],
+    challengeCompletedIds: [],
+    quizPassedIds: [],
     currentLevelId: 1,
+    mode: 'tutorial',
     lastUpdated: new Date().toISOString(),
   };
 }
@@ -107,18 +122,14 @@ export function loadAcademyProgress(): AcademyProgress {
     return createDefaultProgress();
   }
   try {
-    const raw = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(PROGRESS_STORAGE_KEY) ??
+      window.localStorage.getItem('neonspice_academy_progress_v1');
     if (!raw) return createDefaultProgress();
     const parsed = JSON.parse(raw) as Partial<AcademyProgress>;
-    const completedIds = Array.isArray(parsed.completedIds)
-      ? Array.from(
-          new Set(
-            parsed.completedIds.filter(
-              (n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 50
-            )
-          )
-        ).sort((a, b) => a - b)
-      : [];
+    const completedIds = sanitizeIdList(parsed.completedIds);
+    const challengeCompletedIds = sanitizeIdList(parsed.challengeCompletedIds);
+    const quizPassedIds = sanitizeIdList(parsed.quizPassedIds);
     const currentLevelId =
       typeof parsed.currentLevelId === 'number' &&
       Number.isInteger(parsed.currentLevelId) &&
@@ -126,11 +137,19 @@ export function loadAcademyProgress(): AcademyProgress {
       parsed.currentLevelId <= 50
         ? parsed.currentLevelId
         : 1;
+    const mode = parsed.mode === 'challenge' ? 'challenge' : 'tutorial';
     const lastUpdated =
       typeof parsed.lastUpdated === 'string'
         ? parsed.lastUpdated
         : new Date().toISOString();
-    return { completedIds, currentLevelId, lastUpdated };
+    return {
+      completedIds,
+      challengeCompletedIds,
+      quizPassedIds,
+      currentLevelId,
+      mode,
+      lastUpdated,
+    };
   } catch {
     return createDefaultProgress();
   }
@@ -142,8 +161,11 @@ export function saveAcademyProgress(progress: AcademyProgress): void {
   }
   try {
     const payload: AcademyProgress = {
-      completedIds: Array.from(new Set(progress.completedIds)).sort((a, b) => a - b),
+      completedIds: sanitizeIdList(progress.completedIds),
+      challengeCompletedIds: sanitizeIdList(progress.challengeCompletedIds),
+      quizPassedIds: sanitizeIdList(progress.quizPassedIds),
       currentLevelId: progress.currentLevelId,
+      mode: progress.mode === 'challenge' ? 'challenge' : 'tutorial',
       lastUpdated: new Date().toISOString(),
     };
     window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(payload));
@@ -157,6 +179,7 @@ export function resetAcademyProgress(): AcademyProgress {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       window.localStorage.removeItem(PROGRESS_STORAGE_KEY);
+      window.localStorage.removeItem('neonspice_academy_progress_v1');
     } catch {
       // Ignore storage failures
     }

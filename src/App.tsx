@@ -14,7 +14,7 @@ import {
   SimulationResult,
   Wire,
 } from './types/circuit';
-import { AcademyLevel, AcademyProgress } from './types/academy';
+import { AcademyLevel, AcademyMode, AcademyProgress } from './types/academy';
 import { compileNetlist, runSimulation, solveDCOP } from './engine';
 import { PRESET_CIRCUITS } from './circuits/presets';
 import {
@@ -23,6 +23,10 @@ import {
   loadAcademyProgress,
   saveAcademyProgress,
 } from './data/academyLevels';
+import {
+  computeGuidedSteps,
+  createEmptyLevelSchematic,
+} from './data/academyGuidedEngine';
 import { getComponentPrefix, getDefaultParams } from './utils/format';
 import { ComponentPalette, Toolbar, ViewMode } from './components/Toolbar';
 import { SchematicCanvas, SelectionTarget, ToolMode } from './components/SchematicCanvas';
@@ -68,8 +72,11 @@ function nextComponentName(type: ComponentType, existing: CircuitComponent[]): s
   return `${prefix}${idx}`;
 }
 
-function nextProbeLabel(existing: ProbeMarker[]): string {
+function nextProbeLabel(existing: ProbeMarker[], preferredLabel?: string): string {
   const used = new Set(existing.map((p) => p.label.toUpperCase()));
+  if (preferredLabel && !used.has(preferredLabel.toUpperCase())) {
+    return preferredLabel;
+  }
   let idx = 1;
   while (used.has(`V_P${idx}`)) {
     idx++;
@@ -89,8 +96,8 @@ export default function App() {
     cloneSchematic(initialPreset).recommendedAnalysis
   );
   const [toolMode, setToolMode] = useState<ToolMode>('select');
-  const [viewMode, setViewMode] = useState<ViewMode>('2d');
-  const [scopeVisibleIn3D, setScopeVisibleIn3D] = useState(false);
+  // Default to Cities: Skylines-style Top-Down 3D PCB View!
+  const [viewMode, setViewMode] = useState<ViewMode>('3d');
   const [placingType, setPlacingType] = useState<ComponentType>('resistor');
   const [placingRotation, setPlacingRotation] = useState<Rotation>(0);
   const [selection, setSelection] = useState<SelectionTarget>(null);
@@ -102,10 +109,34 @@ export default function App() {
     loadAcademyProgress()
   );
 
+  const academyMode: AcademyMode = academyProgress.mode ?? 'tutorial';
+
   const activeLevel = useMemo(
     () => getLevelById(academyProgress.currentLevelId) ?? ACADEMY_LEVELS[0],
     [academyProgress.currentLevelId]
   );
+
+  // Live empty-board guided step computation (Tutorial mode only)
+  const guidedState = useMemo(() => {
+    if (!academyOpen || !activeLevel || academyMode !== 'tutorial') {
+      return null;
+    }
+    return computeGuidedSteps(activeLevel, schematic);
+  }, [academyOpen, activeLevel, academyMode, schematic]);
+
+  const activeGuidedStep = guidedState?.activeStep ?? null;
+  const highlightedComponentType =
+    academyOpen && academyMode === 'tutorial'
+      ? activeGuidedStep?.highlightedComponentType ?? null
+      : null;
+  const highlightedTool: ToolMode | null =
+    academyOpen && academyMode === 'tutorial'
+      ? activeGuidedStep?.highlightedTool ?? null
+      : null;
+  const guidedTarget =
+    academyOpen && academyMode === 'tutorial'
+      ? activeGuidedStep?.targetGhost ?? null
+      : null;
 
   // Simulation outputs
   const [netlist, setNetlist] = useState<CompiledNetlist | null>(null);
@@ -116,13 +147,22 @@ export default function App() {
   const [runCounter, setRunCounter] = useState(0);
 
   // Vertical split ratio for center pane (top 2D/3D %, bottom Oscilloscope %)
-  const [splitRatio, setSplitRatio] = useState(0.56);
+  const [splitRatio, setSplitRatio] = useState(0.58);
   const centerPaneRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false);
 
   // Run compilation + simulation whenever schematic, analysisConfig, or manual Run triggers
   const executeSimulation = useCallback(
     (curSchematic: CircuitSchematic, curConfig: AnalysisConfig) => {
+      if (curSchematic.components.length === 0) {
+        setNetlist(compileNetlist(curSchematic));
+        setSimResult(null);
+        setDcOpResult(null);
+        setSimError(null);
+        setSolveTimeMs(0);
+        return;
+      }
+
       const t0 = performance.now();
       try {
         const compiled = compileNetlist(curSchematic);
@@ -159,29 +199,40 @@ export default function App() {
     executeSimulation(schematic, analysisConfig);
   }, [schematic, analysisConfig, runCounter, executeSimulation]);
 
-  // Load an Academy level starter circuit
-  const loadAcademyLevel = useCallback((level: AcademyLevel) => {
-    setSchematic(cloneSchematic(level.starterSchematic));
-    setAnalysisConfig(cloneAnalysisConfig(level.verificationAnalysis));
-    setSelection(null);
-    setToolMode('select');
-    setAcademyProgress((prev) => {
-      const next: AcademyProgress = {
-        ...prev,
-        currentLevelId: level.id,
-        lastUpdated: new Date().toISOString(),
-      };
-      saveAcademyProgress(next);
-      return next;
-    });
-  }, []);
+  // Load an Academy level on a completely EMPTY PCB board!
+  const loadAcademyLevel = useCallback(
+    (level: AcademyLevel, overrideMode?: AcademyMode) => {
+      setSchematic(createEmptyLevelSchematic(level));
+      setAnalysisConfig(cloneAnalysisConfig(level.verificationAnalysis));
+      setSelection(null);
+      setToolMode('select');
+      setAcademyProgress((prev) => {
+        const next: AcademyProgress = {
+          ...prev,
+          currentLevelId: level.id,
+          mode: overrideMode ?? prev.mode ?? 'tutorial',
+          lastUpdated: new Date().toISOString(),
+        };
+        saveAcademyProgress(next);
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleChangeAcademyMode = useCallback(
+    (nextMode: AcademyMode) => {
+      if (!activeLevel) return;
+      loadAcademyLevel(activeLevel, nextMode);
+    },
+    [activeLevel, loadAcademyLevel]
+  );
 
   const handleToggleAcademy = useCallback(() => {
     setAcademyOpen((prevOpen) => {
       const nextOpen = !prevOpen;
       if (nextOpen && activeLevel) {
-        // Load active level circuit when opening Academy
-        setSchematic(cloneSchematic(activeLevel.starterSchematic));
+        setSchematic(createEmptyLevelSchematic(activeLevel));
         setAnalysisConfig(cloneAnalysisConfig(activeLevel.verificationAnalysis));
         setSelection(null);
         setToolMode('select');
@@ -197,12 +248,35 @@ export default function App() {
     setToolMode('select');
   }, []);
 
-  const handleMarkLevelCompleted = useCallback((levelId: number) => {
+  const handleMarkLevelCompleted = useCallback((levelId: number, completedMode: AcademyMode) => {
     setAcademyProgress((prev) => {
-      if (prev.completedIds.includes(levelId)) return prev;
+      const nextCompleted = prev.completedIds.includes(levelId)
+        ? prev.completedIds
+        : [...prev.completedIds, levelId].sort((a, b) => a - b);
+      const prevChallenge = prev.challengeCompletedIds ?? [];
+      const nextChallenge =
+        completedMode === 'challenge' && !prevChallenge.includes(levelId)
+          ? [...prevChallenge, levelId].sort((a, b) => a - b)
+          : prevChallenge;
+
       const next: AcademyProgress = {
         ...prev,
-        completedIds: [...prev.completedIds, levelId].sort((a, b) => a - b),
+        completedIds: nextCompleted,
+        challengeCompletedIds: nextChallenge,
+        lastUpdated: new Date().toISOString(),
+      };
+      saveAcademyProgress(next);
+      return next;
+    });
+  }, []);
+
+  const handleMarkQuizPassed = useCallback((levelId: number) => {
+    setAcademyProgress((prev) => {
+      const prevQuiz = prev.quizPassedIds ?? [];
+      if (prevQuiz.includes(levelId)) return prev;
+      const next: AcademyProgress = {
+        ...prev,
+        quizPassedIds: [...prevQuiz, levelId].sort((a, b) => a - b),
         lastUpdated: new Date().toISOString(),
       };
       saveAcademyProgress(next);
@@ -234,7 +308,7 @@ export default function App() {
     setToolMode('select');
   }, [academyOpen, activeLevel, loadAcademyLevel, schematic.id]);
 
-  // Schematic editing handlers
+  // Schematic editing handlers (shared by BOTH 2D SchematicCanvas and 3D Circuit3DView!)
   const handleMoveComponent = useCallback((id: string, x: number, y: number) => {
     setSchematic((prev) => {
       const target = prev.components.find((c) => c.id === id);
@@ -310,18 +384,28 @@ export default function App() {
     }));
   }, []);
 
-  const handlePlaceProbe = useCallback((x: number, y: number) => {
-    const newId = uid('prb');
-    setSchematic((prev) => {
-      const label = nextProbeLabel(prev.probes);
-      const color = PROBE_COLORS[prev.probes.length % PROBE_COLORS.length];
-      return {
-        ...prev,
-        probes: [...prev.probes, { id: newId, label, x, y, color }],
-      };
-    });
-    setSelection({ kind: 'probe', id: newId });
-  }, []);
+  const handlePlaceProbe = useCallback(
+    (x: number, y: number) => {
+      const newId = uid('prb');
+      const targetProbeLabel =
+        academyOpen &&
+        academyMode === 'tutorial' &&
+        activeGuidedStep?.kind === 'add_probe'
+          ? activeGuidedStep.targetGhost?.label
+          : undefined;
+
+      setSchematic((prev) => {
+        const label = nextProbeLabel(prev.probes, targetProbeLabel);
+        const color = PROBE_COLORS[prev.probes.length % PROBE_COLORS.length];
+        return {
+          ...prev,
+          probes: [...prev.probes, { id: newId, label, x, y, color }],
+        };
+      });
+      setSelection({ kind: 'probe', id: newId });
+    },
+    [academyOpen, academyMode, activeGuidedStep]
+  );
 
   const handleUpdateProbe = useCallback((id: string, patch: Partial<ProbeMarker>) => {
     setSchematic((prev) => ({
@@ -341,6 +425,10 @@ export default function App() {
       return { ...prev, probes: prev.probes.filter((p) => p.id !== target.id) };
     });
     setSelection((cur) => (cur && cur.kind === target.kind && cur.id === target.id ? null : cur));
+  }, []);
+
+  const handleRotatePlacing = useCallback(() => {
+    setPlacingRotation((rot) => ((rot + 90) % 360) as Rotation);
   }, []);
 
   // Global keyboard shortcuts (preserving WASD + Arrows for 3D PCB navigation!)
@@ -363,7 +451,7 @@ export default function App() {
         setToolMode('wire');
       } else if (e.key === 'r' || e.key === 'R') {
         if (toolMode === 'place') {
-          setPlacingRotation((rot) => ((rot + 90) % 360) as Rotation);
+          handleRotatePlacing();
         } else if (selection?.kind === 'component') {
           handleRotateComponent(selection.id);
         }
@@ -376,7 +464,15 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [tutorialOpen, viewMode, toolMode, selection, handleRotateComponent, handleDeleteTarget]);
+  }, [
+    tutorialOpen,
+    viewMode,
+    toolMode,
+    selection,
+    handleRotatePlacing,
+    handleRotateComponent,
+    handleDeleteTarget,
+  ]);
 
   // Draggable split divider between Schematic/3D and Oscilloscope
   useEffect(() => {
@@ -439,17 +535,17 @@ export default function App() {
 
       {/* Main Workbench Area */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
-        {/* Left Tool & Component Palette */}
+        {/* Left Tool & Component Palette (with Pulsing Tutorial Highlights!) */}
         <ComponentPalette
           toolMode={toolMode}
           placingType={placingType}
+          highlightedComponentType={highlightedComponentType}
+          highlightedTool={highlightedTool}
           onSelectTool={(mode) => setToolMode(mode)}
           onSelectPlacingType={(type) => {
             setPlacingType(type);
             setToolMode('place');
-            if (viewMode === '3d') {
-              setViewMode('split');
-            }
+            // Stay in current viewMode (including 3D!) so user places directly on the 3D PCB!
           }}
         />
 
@@ -460,12 +556,17 @@ export default function App() {
             levels={ACADEMY_LEVELS}
             progress={academyProgress}
             activeLevel={activeLevel}
+            mode={academyMode}
+            guidedSteps={guidedState?.steps ?? []}
+            activeGuidedStep={activeGuidedStep}
             currentSchematic={schematic}
             onClose={() => setAcademyOpen(false)}
             onSelectLevel={loadAcademyLevel}
+            onChangeMode={handleChangeAcademyMode}
             onApplySolution={handleApplySolution}
-            onResetLevel={loadAcademyLevel}
+            onResetLevel={(lvl) => loadAcademyLevel(lvl)}
             onMarkCompleted={handleMarkLevelCompleted}
+            onMarkQuizPassed={handleMarkQuizPassed}
           />
         )}
 
@@ -481,134 +582,105 @@ export default function App() {
             overflow: 'hidden',
           }}
         >
-          {/* Top: 2D Schematic / Split 2D + 3D / Full-Panel 3D PCB Lab */}
-          {(() => {
-            const showOscilloscope = viewMode !== '3d' || scopeVisibleIn3D;
-            return (
-              <>
-                <div
-                  style={{
-                    height: showOscilloscope ? `${splitRatio * 100}%` : '100%',
-                    flex: showOscilloscope ? undefined : 1,
-                    minHeight: 160,
-                    position: 'relative',
-                    display: 'flex',
-                    minWidth: 0,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {(viewMode === '2d' || viewMode === 'split') && (
-                    <div
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        height: '100%',
-                        position: 'relative',
-                        borderRight: viewMode === 'split' ? '1px solid var(--border-strong)' : 'none',
-                      }}
-                    >
-                      <SchematicCanvas
-                        schematic={schematic}
-                        netlist={netlist}
-                        dcOpResult={dcOpResult}
-                        toolMode={toolMode}
-                        placingType={placingType}
-                        placingRotation={placingRotation}
-                        selection={selection}
-                        onSelect={setSelection}
-                        onMoveComponent={handleMoveComponent}
-                        onAddWireSegments={handleAddWireSegments}
-                        onPlaceComponent={handlePlaceComponent}
-                        onPlaceProbe={handlePlaceProbe}
-                        onDeleteTarget={handleDeleteTarget}
-                        onRotatePlacing={() => setPlacingRotation((rot) => ((rot + 90) % 360) as Rotation)}
-                      />
-                    </div>
-                  )}
+          {/* Top: 3D PCB Lab (default) / Split 2D + 3D / 2D Schematic */}
+          <div
+            style={{
+              height: `${splitRatio * 100}%`,
+              minHeight: 160,
+              position: 'relative',
+              display: 'flex',
+              minWidth: 0,
+              overflow: 'hidden',
+            }}
+          >
+            {(viewMode === '2d' || viewMode === 'split') && (
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: '100%',
+                  position: 'relative',
+                  borderRight: viewMode === 'split' ? '1px solid var(--border-strong)' : 'none',
+                }}
+              >
+                <SchematicCanvas
+                  schematic={schematic}
+                  netlist={netlist}
+                  dcOpResult={dcOpResult}
+                  toolMode={toolMode}
+                  placingType={placingType}
+                  placingRotation={placingRotation}
+                  selection={selection}
+                  onSelect={setSelection}
+                  onMoveComponent={handleMoveComponent}
+                  onAddWireSegments={handleAddWireSegments}
+                  onPlaceComponent={handlePlaceComponent}
+                  onPlaceProbe={handlePlaceProbe}
+                  onDeleteTarget={handleDeleteTarget}
+                  onRotatePlacing={handleRotatePlacing}
+                />
+              </div>
+            )}
 
-                  {(viewMode === '3d' || viewMode === 'split') && (
-                    <div
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        height: '100%',
-                        position: 'relative',
-                      }}
-                    >
-                      <Circuit3DView
-                        schematic={schematic}
-                        netlist={netlist}
-                        dcOpResult={dcOpResult}
-                        selectedComponentId={selection?.kind === 'component' ? selection.id : null}
-                        onSelectComponent={(compId) =>
-                          setSelection(compId ? { kind: 'component', id: compId } : null)
-                        }
-                      />
-                      {viewMode === '3d' && (
-                        <button
-                          onClick={() => setScopeVisibleIn3D((v) => !v)}
-                          title={scopeVisibleIn3D ? 'Osiloskopu Gizle (Tam Ekran 3D)' : 'Osiloskopu Altta Göster'}
-                          style={{
-                            position: 'absolute',
-                            right: 12,
-                            bottom: 12,
-                            zIndex: 20,
-                            padding: '6px 12px',
-                            borderRadius: 8,
-                            background: scopeVisibleIn3D
-                              ? 'rgba(34, 211, 238, 0.22)'
-                              : 'rgba(15, 23, 42, 0.86)',
-                            border: `1px solid ${
-                              scopeVisibleIn3D ? 'rgba(34, 211, 238, 0.6)' : 'rgba(148, 163, 184, 0.35)'
-                            }`,
-                            color: scopeVisibleIn3D ? '#67e8f9' : '#e2e8f0',
-                            fontSize: 12,
-                            fontWeight: 600,
-                            backdropFilter: 'blur(8px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                          }}
-                        >
-                          {scopeVisibleIn3D ? 'Tam Ekran 3D' : 'Osiloskopu Göster'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+            {(viewMode === '3d' || viewMode === 'split') && (
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: '100%',
+                  position: 'relative',
+                }}
+              >
+                <Circuit3DView
+                  schematic={schematic}
+                  netlist={netlist}
+                  dcOpResult={dcOpResult}
+                  selectedComponentId={selection?.kind === 'component' ? selection.id : null}
+                  onSelectComponent={(compId) =>
+                    setSelection(compId ? { kind: 'component', id: compId } : null)
+                  }
+                  toolMode={toolMode}
+                  placingType={placingType}
+                  placingRotation={placingRotation}
+                  guidedTarget={guidedTarget}
+                  onMoveComponent={handleMoveComponent}
+                  onAddWireSegments={handleAddWireSegments}
+                  onPlaceComponent={handlePlaceComponent}
+                  onPlaceProbe={handlePlaceProbe}
+                  onDeleteTarget={handleDeleteTarget}
+                  onRotatePlacing={handleRotatePlacing}
+                />
+              </div>
+            )}
+          </div>
 
-                {showOscilloscope && (
-                  <>
-                    {/* Draggable Horizontal Divider */}
-                    <div
-                      onMouseDown={() => {
-                        isResizingRef.current = true;
-                        document.body.style.cursor = 'row-resize';
-                      }}
-                      title="Şema / Osiloskop oranını sürükleyerek ayarlayın"
-                      style={{
-                        height: 8,
-                        flexShrink: 0,
-                        background: 'var(--bg-panel)',
-                        borderTop: '1px solid var(--border-subtle)',
-                        borderBottom: '1px solid var(--border-subtle)',
-                        cursor: 'row-resize',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--text-muted)',
-                      }}
-                    >
-                      <GripHorizontal size={15} />
-                    </div>
+          {/* Draggable Horizontal Divider */}
+          <div
+            onMouseDown={() => {
+              isResizingRef.current = true;
+              document.body.style.cursor = 'row-resize';
+            }}
+            title="Şema / Osiloskop oranını sürükleyerek ayarlayın"
+            style={{
+              height: 8,
+              flexShrink: 0,
+              background: 'var(--bg-panel)',
+              borderTop: '1px solid var(--border-subtle)',
+              borderBottom: '1px solid var(--border-subtle)',
+              cursor: 'row-resize',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-muted)',
+            }}
+          >
+            <GripHorizontal size={15} />
+          </div>
 
-                    {/* Bottom: Oscilloscope / Bode / DC Table */}
-                    <div style={{ flex: 1, minHeight: 140, overflow: 'hidden' }}>
-                      <Oscilloscope result={simResult} probes={schematic.probes} error={simError} />
-                    </div>
-                  </>
-                )}
-              </>
-            );
-          })()}
+          {/* Bottom: Oscilloscope / Bode / DC Table */}
+          <div style={{ flex: 1, minHeight: 140, overflow: 'hidden' }}>
+            <Oscilloscope result={simResult} probes={schematic.probes} error={simError} />
+          </div>
         </div>
 
         {/* Right Sidebar: Inspector / Netlist / Theory */}
