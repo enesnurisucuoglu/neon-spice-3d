@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NeonSPICE 3D (v2)
+Comment=Interactive 3D PCB & SPICE Circuit Simulation Lab
+Exec=/home/abra/.gemini/antigravity/scratch/neon-spice-3d/start-3d.sh
+Path=/home/abra/.gemini/antigravity/scratch/neon-spice-3d
+Terminal=true
+Categories=Development;Science;Electronics;Engineering;
+StartupNotify=true
