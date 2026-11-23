@@ -89,7 +89,8 @@ export default function App() {
     cloneSchematic(initialPreset).recommendedAnalysis
   );
   const [toolMode, setToolMode] = useState<ToolMode>('select');
-  const [viewMode, setViewMode] = useState<ViewMode>('split');
+  const [viewMode, setViewMode] = useState<ViewMode>('2d');
+  const [scopeVisibleIn3D, setScopeVisibleIn3D] = useState(false);
   const [placingType, setPlacingType] = useState<ComponentType>('resistor');
   const [placingRotation, setPlacingRotation] = useState<Rotation>(0);
   const [selection, setSelection] = useState<SelectionTarget>(null);
@@ -480,95 +481,134 @@ export default function App() {
             overflow: 'hidden',
           }}
         >
-          {/* Top: 2D Schematic / Split 2D + 3D / 3D PCB Lab */}
-          <div
-            style={{
-              height: `${splitRatio * 100}%`,
-              minHeight: 160,
-              position: 'relative',
-              display: 'flex',
-              minWidth: 0,
-              overflow: 'hidden',
-            }}
-          >
-            {(viewMode === '2d' || viewMode === 'split') && (
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  height: '100%',
-                  position: 'relative',
-                  borderRight: viewMode === 'split' ? '1px solid var(--border-strong)' : 'none',
-                }}
-              >
-                <SchematicCanvas
-                  schematic={schematic}
-                  netlist={netlist}
-                  dcOpResult={dcOpResult}
-                  toolMode={toolMode}
-                  placingType={placingType}
-                  placingRotation={placingRotation}
-                  selection={selection}
-                  onSelect={setSelection}
-                  onMoveComponent={handleMoveComponent}
-                  onAddWireSegments={handleAddWireSegments}
-                  onPlaceComponent={handlePlaceComponent}
-                  onPlaceProbe={handlePlaceProbe}
-                  onDeleteTarget={handleDeleteTarget}
-                  onRotatePlacing={() => setPlacingRotation((rot) => ((rot + 90) % 360) as Rotation)}
-                />
-              </div>
-            )}
+          {/* Top: 2D Schematic / Split 2D + 3D / Full-Panel 3D PCB Lab */}
+          {(() => {
+            const showOscilloscope = viewMode !== '3d' || scopeVisibleIn3D;
+            return (
+              <>
+                <div
+                  style={{
+                    height: showOscilloscope ? `${splitRatio * 100}%` : '100%',
+                    flex: showOscilloscope ? undefined : 1,
+                    minHeight: 160,
+                    position: 'relative',
+                    display: 'flex',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {(viewMode === '2d' || viewMode === 'split') && (
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: '100%',
+                        position: 'relative',
+                        borderRight: viewMode === 'split' ? '1px solid var(--border-strong)' : 'none',
+                      }}
+                    >
+                      <SchematicCanvas
+                        schematic={schematic}
+                        netlist={netlist}
+                        dcOpResult={dcOpResult}
+                        toolMode={toolMode}
+                        placingType={placingType}
+                        placingRotation={placingRotation}
+                        selection={selection}
+                        onSelect={setSelection}
+                        onMoveComponent={handleMoveComponent}
+                        onAddWireSegments={handleAddWireSegments}
+                        onPlaceComponent={handlePlaceComponent}
+                        onPlaceProbe={handlePlaceProbe}
+                        onDeleteTarget={handleDeleteTarget}
+                        onRotatePlacing={() => setPlacingRotation((rot) => ((rot + 90) % 360) as Rotation)}
+                      />
+                    </div>
+                  )}
 
-            {(viewMode === '3d' || viewMode === 'split') && (
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  height: '100%',
-                  position: 'relative',
-                }}
-              >
-                <Circuit3DView
-                  schematic={schematic}
-                  netlist={netlist}
-                  dcOpResult={dcOpResult}
-                  selectedComponentId={selection?.kind === 'component' ? selection.id : null}
-                  onSelectComponent={(compId) =>
-                    setSelection(compId ? { kind: 'component', id: compId } : null)
-                  }
-                />
-              </div>
-            )}
-          </div>
+                  {(viewMode === '3d' || viewMode === 'split') && (
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: '100%',
+                        position: 'relative',
+                      }}
+                    >
+                      <Circuit3DView
+                        schematic={schematic}
+                        netlist={netlist}
+                        dcOpResult={dcOpResult}
+                        selectedComponentId={selection?.kind === 'component' ? selection.id : null}
+                        onSelectComponent={(compId) =>
+                          setSelection(compId ? { kind: 'component', id: compId } : null)
+                        }
+                      />
+                      {viewMode === '3d' && (
+                        <button
+                          onClick={() => setScopeVisibleIn3D((v) => !v)}
+                          title={scopeVisibleIn3D ? 'Osiloskopu Gizle (Tam Ekran 3D)' : 'Osiloskopu Altta Göster'}
+                          style={{
+                            position: 'absolute',
+                            right: 12,
+                            bottom: 12,
+                            zIndex: 20,
+                            padding: '6px 12px',
+                            borderRadius: 8,
+                            background: scopeVisibleIn3D
+                              ? 'rgba(34, 211, 238, 0.22)'
+                              : 'rgba(15, 23, 42, 0.86)',
+                            border: `1px solid ${
+                              scopeVisibleIn3D ? 'rgba(34, 211, 238, 0.6)' : 'rgba(148, 163, 184, 0.35)'
+                            }`,
+                            color: scopeVisibleIn3D ? '#67e8f9' : '#e2e8f0',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            backdropFilter: 'blur(8px)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                          }}
+                        >
+                          {scopeVisibleIn3D ? 'Tam Ekran 3D' : 'Osiloskopu Göster'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-          {/* Draggable Horizontal Divider */}
-          <div
-            onMouseDown={() => {
-              isResizingRef.current = true;
-              document.body.style.cursor = 'row-resize';
-            }}
-            title="Şema / Osiloskop oranını sürükleyerek ayarlayın"
-            style={{
-              height: 8,
-              flexShrink: 0,
-              background: 'var(--bg-panel)',
-              borderTop: '1px solid var(--border-subtle)',
-              borderBottom: '1px solid var(--border-subtle)',
-              cursor: 'row-resize',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <GripHorizontal size={15} />
-          </div>
+                {showOscilloscope && (
+                  <>
+                    {/* Draggable Horizontal Divider */}
+                    <div
+                      onMouseDown={() => {
+                        isResizingRef.current = true;
+                        document.body.style.cursor = 'row-resize';
+                      }}
+                      title="Şema / Osiloskop oranını sürükleyerek ayarlayın"
+                      style={{
+                        height: 8,
+                        flexShrink: 0,
+                        background: 'var(--bg-panel)',
+                        borderTop: '1px solid var(--border-subtle)',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        cursor: 'row-resize',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      <GripHorizontal size={15} />
+                    </div>
 
-          {/* Bottom: Oscilloscope / Bode / DC Table */}
-          <div style={{ flex: 1, minHeight: 140, overflow: 'hidden' }}>
-            <Oscilloscope result={simResult} probes={schematic.probes} error={simError} />
-          </div>
+                    {/* Bottom: Oscilloscope / Bode / DC Table */}
+                    <div style={{ flex: 1, minHeight: 140, overflow: 'hidden' }}>
+                      <Oscilloscope result={simResult} probes={schematic.probes} error={simError} />
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Right Sidebar: Inspector / Netlist / Theory */}
