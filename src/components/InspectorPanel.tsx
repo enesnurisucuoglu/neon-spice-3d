@@ -275,9 +275,9 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   return (
     <aside
       style={{
-        width: 344,
+        width: 348,
         flexShrink: 0,
-        background: 'var(--bg-panel)',
+        background: 'linear-gradient(180deg, #0d1424 0%, #090e1a 100%)',
         borderLeft: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
@@ -285,46 +285,60 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
         overflow: 'hidden',
       }}
     >
-      {/* Tab Header */}
+      {/* Pill Segmented Tab Header */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
+          padding: '10px 12px 9px',
           borderBottom: '1px solid var(--border-subtle)',
-          background: 'var(--bg-panel-alt)',
+          background: 'rgba(13, 20, 36, 0.9)',
         }}
       >
-        {(
-          [
-            { id: 'inspector', label: 'Inspector', icon: Sliders },
-            { id: 'netlist', label: 'Netlist', icon: FileCode2 },
-            { id: 'theory', label: 'Theory', icon: BookOpen },
-          ] as const
-        ).map(({ id, label, icon: Icon }) => {
-          const active = activeTab === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                padding: '10px 6px',
-                fontSize: 13,
-                fontWeight: active ? 700 : 500,
-                color: active ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                borderBottom: active ? '2px solid var(--accent-cyan)' : '2px solid transparent',
-                background: active ? 'rgba(34, 211, 238, 0.08)' : 'transparent',
-                transition: 'all 0.12s ease',
-              }}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          );
-        })}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: 3,
+            padding: 3,
+            borderRadius: 10,
+            background: 'rgba(7, 11, 20, 0.8)',
+            border: '1px solid var(--border-subtle)',
+          }}
+        >
+          {(
+            [
+              { id: 'inspector', label: 'Özellikler', icon: Sliders },
+              { id: 'netlist', label: 'Netlist', icon: FileCode2 },
+              { id: 'theory', label: 'Teori', icon: BookOpen },
+            ] as const
+          ).map(({ id, label, icon: Icon }) => {
+            const active = activeTab === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={active ? undefined : 'ns-btn'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
+                  padding: '6px 6px',
+                  borderRadius: 7,
+                  fontSize: 12.5,
+                  fontWeight: active ? 700 : 500,
+                  color: active ? '#04111b' : 'var(--text-secondary)',
+                  background: active
+                    ? 'linear-gradient(135deg, #22d3ee, #60a5fa)'
+                    : 'transparent',
+                  boxShadow: active ? '0 2px 10px rgba(34, 211, 238, 0.3)' : 'none',
+                }}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tab Body */}
@@ -872,10 +886,11 @@ const BeginnerComponentGuideCard: React.FC<{
   onToggle: () => void;
 }> = ({ guide, expanded, onToggle }) => (
   <div
+    className="ns-card"
     style={{
-      background: 'linear-gradient(180deg, rgba(14, 116, 144, 0.16) 0%, rgba(15, 23, 42, 0.85) 100%)',
-      border: '1px solid rgba(34, 211, 238, 0.4)',
-      borderRadius: 9,
+      background: 'linear-gradient(180deg, rgba(14, 116, 144, 0.16) 0%, rgba(13, 20, 36, 0.92) 100%)',
+      border: '1px solid rgba(34, 211, 238, 0.36)',
+      borderRadius: 10,
       overflow: 'hidden',
     }}
   >
@@ -886,9 +901,9 @@ const BeginnerComponentGuideCard: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '9px 11px',
-        background: 'rgba(34, 211, 238, 0.1)',
-        borderBottom: expanded ? '1px solid rgba(34, 211, 238, 0.25)' : 'none',
+        padding: '9px 12px',
+        background: 'rgba(34, 211, 238, 0.08)',
+        borderBottom: expanded ? '1px solid rgba(34, 211, 238, 0.22)' : 'none',
         color: '#67e8f9',
         fontSize: 12,
         fontWeight: 700,
@@ -903,7 +918,7 @@ const BeginnerComponentGuideCard: React.FC<{
     </button>
 
     {expanded && (
-      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 13.5, fontWeight: 700, color: '#f8fafc' }}>{guide.title}</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.5 }}>
           {guide.shortDesc}
@@ -912,10 +927,10 @@ const BeginnerComponentGuideCard: React.FC<{
           style={{
             fontSize: 12.5,
             color: '#bae6fd',
-            background: 'rgba(11, 15, 23, 0.55)',
-            borderLeft: '2px solid var(--accent-cyan)',
-            padding: '7px 9px',
-            borderRadius: '0 6px 6px 0',
+            background: 'rgba(7, 11, 20, 0.65)',
+            borderLeft: '2.5px solid var(--accent-cyan)',
+            padding: '7px 10px',
+            borderRadius: '0 7px 7px 0',
             lineHeight: 1.48,
           }}
         >
@@ -932,9 +947,9 @@ const BeginnerComponentGuideCard: React.FC<{
             fontSize: 11.5,
             fontFamily: 'var(--font-mono)',
             color: 'var(--accent-amber)',
-            background: 'rgba(11, 15, 23, 0.5)',
+            background: 'rgba(7, 11, 20, 0.6)',
             padding: '5px 8px',
-            borderRadius: 5,
+            borderRadius: 6,
           }}
         >
           Tipik Değerler: {guide.typicalValues}
@@ -951,10 +966,11 @@ const SectionCard: React.FC<{
   children: React.ReactNode;
 }> = ({ title, accent, actions, children }) => (
   <div
+    className="ns-card"
     style={{
       background: 'var(--bg-panel-alt)',
       border: '1px solid var(--border-subtle)',
-      borderRadius: 8,
+      borderRadius: 10,
       overflow: 'hidden',
     }}
   >
@@ -963,9 +979,9 @@ const SectionCard: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '8px 11px',
+        padding: '9px 12px',
         borderBottom: '1px solid var(--border-subtle)',
-        background: 'rgba(11, 15, 23, 0.45)',
+        background: 'rgba(7, 11, 20, 0.45)',
       }}
     >
       <span
@@ -981,7 +997,7 @@ const SectionCard: React.FC<{
       </span>
       {actions}
     </div>
-    <div style={{ padding: 11, display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
+    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
   </div>
 );
 

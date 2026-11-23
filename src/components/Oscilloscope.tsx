@@ -264,10 +264,10 @@ export const Oscilloscope: React.FC<OscilloscopeProps> = ({ result, probes, erro
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 10,
-          padding: '7px 14px',
-          background: 'var(--bg-panel)',
+          padding: '8px 14px',
+          background: 'linear-gradient(180deg, rgba(15,23,42,0.95), rgba(11,17,30,0.95))',
           borderBottom: '1px solid var(--border-subtle)',
-          minHeight: 38,
+          minHeight: 42,
           flexWrap: 'wrap',
         }}
       >
@@ -1153,9 +1153,30 @@ const MetricItem: React.FC<{ label: string; value: string; highlight?: boolean }
   value,
   highlight,
 }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-    <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-    <span style={{ color: highlight ? 'var(--accent-cyan)' : 'var(--text-primary)', fontWeight: 600 }}>
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      padding: '3px 9px',
+      borderRadius: 8,
+      background: highlight
+        ? 'rgba(34, 211, 238, 0.14)'
+        : 'rgba(7, 11, 20, 0.78)',
+      border: `1px solid ${
+        highlight ? 'rgba(34, 211, 238, 0.42)' : 'var(--border-subtle)'
+      }`,
+      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+    }}
+  >
+    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{label}</span>
+    <span
+      style={{
+        color: highlight ? '#67e8f9' : 'var(--text-primary)',
+        fontWeight: 700,
+        fontSize: 12,
+      }}
+    >
       {value}
     </span>
   </span>

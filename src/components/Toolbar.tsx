@@ -49,9 +49,9 @@ const ANALYSIS_MODES: { id: AnalysisType; label: string }[] = [
 ];
 
 const VIEW_MODES: { id: ViewMode; label: string; icon: 'layers' | 'split' | 'box' }[] = [
-  { id: '2d', label: '2D', icon: 'layers' },
-  { id: 'split', label: 'Split 2D+3D', icon: 'split' },
   { id: '3d', label: '3D PCB', icon: 'box' },
+  { id: 'split', label: '2D+3D', icon: 'split' },
+  { id: '2d', label: '2D', icon: 'layers' },
 ];
 
 const CATEGORY_ORDER: CircuitSchematic['category'][] = [
@@ -99,66 +99,64 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
   return (
     <header
       style={{
-        height: 52,
+        height: 56,
         flexShrink: 0,
-        background: 'var(--bg-panel)',
+        background: 'linear-gradient(180deg, rgba(15,23,42,0.96), rgba(10,15,28,0.94))',
         borderBottom: '1px solid var(--border-subtle)',
-        padding: '0 14px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+        padding: '0 16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 10,
+        gap: 12,
         userSelect: 'none',
         overflowX: 'auto',
       }}
     >
-      {/* Left: Brand + Preset Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      {/* Left: Modern Brand Lockup + Preset Selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
           <div
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 7,
-              background: 'linear-gradient(135deg, rgba(34,211,238,0.24), rgba(52,211,153,0.16))',
-              border: '1px solid rgba(34, 211, 238, 0.55)',
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: 'linear-gradient(135deg, #22d3ee, #3b82f6)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 12px rgba(34, 211, 238, 0.25)',
+              boxShadow: '0 0 16px rgba(34, 211, 238, 0.35)',
             }}
           >
-            <Zap size={16} color="#22d3ee" fill="rgba(34, 211, 238, 0.35)" />
+            <Zap size={15} color="#04111b" fill="#04111b" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span
                 style={{
-                  fontSize: 15,
+                  fontSize: 15.5,
                   fontWeight: 800,
-                  letterSpacing: '0.02em',
-                  color: '#f8fafc',
+                  letterSpacing: '-0.01em',
+                  background: 'linear-gradient(90deg, #f8fafc 0%, #67e8f9 55%, #34d399 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
-                Neon
-                <span style={{ color: 'var(--accent-cyan)', textShadow: '0 0 10px rgba(34,211,238,0.45)' }}>
-                  SPICE
-                </span>{' '}
-                <span style={{ color: 'var(--accent-emerald)' }}>3D</span>
+                NeonSPICE 3D
               </span>
               <span
                 style={{
                   fontSize: 10,
                   fontWeight: 700,
                   fontFamily: 'var(--font-mono)',
-                  padding: '1px 5px',
-                  borderRadius: 4,
-                  background: 'rgba(34, 211, 238, 0.16)',
-                  border: '1px solid rgba(34, 211, 238, 0.45)',
-                  color: 'var(--accent-cyan)',
+                  padding: '1.5px 6px',
+                  borderRadius: 999,
+                  background: 'rgba(34, 211, 238, 0.14)',
+                  border: '1px solid rgba(34, 211, 238, 0.38)',
+                  color: '#67e8f9',
                 }}
               >
-                v2
+                v2.2
               </span>
             </div>
             <span
@@ -166,10 +164,10 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
                 fontSize: 9.5,
                 fontFamily: 'var(--font-mono)',
                 color: 'var(--text-muted)',
-                letterSpacing: '0.06em',
+                letterSpacing: '0.07em',
               }}
             >
-              PCB &amp; MNA SOLVER
+              HARDWARE LAB · MNA SPICE
             </span>
           </div>
         </div>
@@ -186,12 +184,12 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
           }}
           title="Hazır Devre Seç"
           style={{
-            minWidth: 180,
+            minWidth: 182,
             maxWidth: 230,
-            background: 'var(--bg-app)',
+            background: 'rgba(7, 11, 20, 0.78)',
             border: '1px solid var(--border-strong)',
-            borderRadius: 7,
-            padding: '6px 9px',
+            borderRadius: 9,
+            padding: '6px 10px',
             fontSize: 12.5,
             fontFamily: 'var(--font-sans)',
             fontWeight: 500,
@@ -213,16 +211,16 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
         </select>
       </div>
 
-      {/* Center: View Mode Switcher + Analysis Mode Segmented Control */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        {/* 2D / Split / 3D View Switcher */}
+      {/* Center: Pill Segmented Controls for View Mode + Analysis Mode */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        {/* 3D PCB | 2D+3D | 2D View Switcher */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'var(--bg-app)',
+            background: 'rgba(7, 11, 20, 0.75)',
             border: '1px solid var(--border-subtle)',
-            borderRadius: 8,
+            borderRadius: 10,
             padding: 3,
             gap: 2,
           }}
@@ -233,18 +231,20 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
               <button
                 key={vm.id}
                 onClick={() => onSelectViewMode(vm.id)}
+                className={active ? undefined : 'ns-btn'}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 5,
                   padding: '5px 10px',
-                  borderRadius: 6,
+                  borderRadius: 7,
                   fontSize: 12,
                   fontWeight: active ? 700 : 500,
-                  color: active ? '#071018' : 'var(--text-secondary)',
-                  background: active ? 'var(--accent-emerald)' : 'transparent',
-                  boxShadow: active ? '0 0 10px rgba(52, 211, 153, 0.35)' : 'none',
-                  transition: 'all 0.12s ease',
+                  color: active ? '#04111b' : 'var(--text-secondary)',
+                  background: active
+                    ? 'linear-gradient(135deg, #34d399, #22d3ee)'
+                    : 'transparent',
+                  boxShadow: active ? '0 2px 10px rgba(52, 211, 153, 0.35)' : 'none',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -262,9 +262,9 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            background: 'var(--bg-app)',
+            background: 'rgba(7, 11, 20, 0.75)',
             border: '1px solid var(--border-subtle)',
-            borderRadius: 8,
+            borderRadius: 10,
             padding: 3,
             gap: 2,
           }}
@@ -275,15 +275,17 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
               <button
                 key={m.id}
                 onClick={() => onSelectAnalysisType(m.id)}
+                className={active ? undefined : 'ns-btn'}
                 style={{
                   padding: '5px 10px',
-                  borderRadius: 6,
+                  borderRadius: 7,
                   fontSize: 12,
                   fontWeight: active ? 700 : 500,
-                  color: active ? '#0b0f17' : 'var(--text-secondary)',
-                  background: active ? 'var(--accent-cyan)' : 'transparent',
-                  boxShadow: active ? '0 0 10px rgba(34, 211, 238, 0.35)' : 'none',
-                  transition: 'all 0.12s ease',
+                  color: active ? '#04111b' : 'var(--text-secondary)',
+                  background: active
+                    ? 'linear-gradient(135deg, #22d3ee, #60a5fa)'
+                    : 'transparent',
+                  boxShadow: active ? '0 2px 10px rgba(34, 211, 238, 0.35)' : 'none',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -294,9 +296,9 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
         </div>
       </div>
 
-      {/* Right: Academy + Guide + Timing + Run + Reset */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-        {/* 50-Level Academy Button */}
+      {/* Right: Akademi + Rehber + Timing + Çalıştır + Reset */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {/* Sleek Akademi Button */}
         <button
           onClick={onToggleAcademy}
           title="50 Seviyelik Uygulamalı Elektronik Akademisi"
@@ -305,31 +307,32 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
             alignItems: 'center',
             gap: 6,
             padding: '6px 11px',
-            borderRadius: 7,
-            fontSize: 12,
+            borderRadius: 9,
+            fontSize: 12.5,
             fontWeight: 700,
             background: academyOpen
-              ? 'linear-gradient(135deg, rgba(167,139,250,0.32), rgba(34,211,238,0.24))'
-              : 'linear-gradient(135deg, rgba(167,139,250,0.16), rgba(34,211,238,0.12))',
-            border: `1px solid ${academyOpen ? '#a78bfa' : 'rgba(167, 139, 250, 0.55)'}`,
-            color: '#e9d5ff',
+              ? 'linear-gradient(135deg, rgba(139,92,246,0.32), rgba(34,211,238,0.22))'
+              : 'rgba(18, 28, 48, 0.85)',
+            border: `1px solid ${academyOpen ? '#a78bfa' : 'rgba(167, 139, 250, 0.42)'}`,
+            color: '#f3e8ff',
             boxShadow: academyOpen
-              ? '0 0 14px rgba(167, 139, 250, 0.4)'
-              : '0 0 10px rgba(167, 139, 250, 0.18)',
+              ? '0 0 16px rgba(167, 139, 250, 0.4)'
+              : 'inset 0 1px 0 rgba(255,255,255,0.06)',
             whiteSpace: 'nowrap',
-            transition: 'all 0.14s ease',
           }}
         >
           <GraduationCap size={15} color="#c4b5fd" />
-          <span>50 Level Akademi</span>
+          <span>Akademi</span>
           <span
+            className="ns-pill"
             style={{
-              padding: '1px 6px',
-              borderRadius: 999,
+              padding: '1px 7px',
               fontSize: 10.5,
               fontFamily: 'var(--font-mono)',
-              background: 'rgba(11, 15, 23, 0.7)',
-              color: academyCompletedCount > 0 ? '#34d399' : '#22d3ee',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, rgba(52,211,153,0.22), rgba(34,211,238,0.22))',
+              border: '1px solid rgba(52, 211, 153, 0.45)',
+              color: '#6ee7b7',
             }}
           >
             {academyCompletedCount}/{academyTotalCount}
@@ -339,17 +342,18 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
         {/* Quick Start Guide Button */}
         <button
           onClick={onOpenTutorial}
+          className="ns-btn"
           title="Hızlı Başlangıç Rehberi (5 Adım)"
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 5,
             padding: '6px 10px',
-            borderRadius: 7,
+            borderRadius: 9,
             fontSize: 12,
             fontWeight: 600,
-            background: 'rgba(34, 211, 238, 0.12)',
-            border: '1px solid rgba(34, 211, 238, 0.4)',
+            background: 'rgba(18, 28, 48, 0.8)',
+            border: '1px solid var(--border-strong)',
             color: 'var(--accent-cyan)',
             whiteSpace: 'nowrap',
           }}
@@ -364,9 +368,9 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: 4,
-              padding: '5px 8px',
-              borderRadius: 6,
-              background: hasError ? 'rgba(251, 113, 133, 0.14)' : 'var(--bg-app)',
+              padding: '5px 9px',
+              borderRadius: 8,
+              background: hasError ? 'rgba(251, 113, 133, 0.14)' : 'rgba(7, 11, 20, 0.72)',
               border: `1px solid ${hasError ? 'rgba(251, 113, 133, 0.45)' : 'var(--border-subtle)'}`,
               fontFamily: 'var(--font-mono)',
               fontSize: 11.5,
@@ -380,38 +384,40 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
           </div>
         )}
 
+        {/* Modern Gradient Çalıştır CTA */}
         <button
           onClick={onRunSimulation}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 5,
-            padding: '6px 12px',
-            borderRadius: 7,
+            padding: '6px 14px',
+            borderRadius: 9,
             fontSize: 12.5,
-            fontWeight: 700,
-            background: 'rgba(52, 211, 153, 0.18)',
-            border: '1px solid rgba(52, 211, 153, 0.55)',
-            color: 'var(--accent-emerald)',
+            fontWeight: 800,
+            background: 'linear-gradient(135deg, #10b981, #06b6d4)',
+            color: '#04111b',
+            boxShadow: '0 2px 14px rgba(16, 185, 129, 0.38)',
             whiteSpace: 'nowrap',
           }}
           title="Simülasyonu Yeniden Çalıştır"
         >
           <Play size={12} fill="currentColor" />
-          Run
+          Çalıştır
         </button>
 
         <button
           onClick={onResetPreset}
+          className="ns-btn"
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 4,
             padding: '6px 9px',
-            borderRadius: 7,
+            borderRadius: 9,
             fontSize: 12,
             fontWeight: 600,
-            background: 'var(--bg-panel-alt)',
+            background: 'rgba(18, 28, 48, 0.8)',
             border: '1px solid var(--border-strong)',
             color: 'var(--text-secondary)',
             whiteSpace: 'nowrap',
@@ -419,7 +425,7 @@ export const Toolbar: React.FC<TopToolbarProps> = ({
           title="Devreyi Başlangıç Haline Sıfırla"
         >
           <RotateCcw size={12} />
-          Reset
+          Sıfırla
         </button>
       </div>
     </header>
@@ -444,9 +450,10 @@ interface PaletteItem {
   accent: string;
 }
 
-const PALETTE_GROUPS: { title: string; items: PaletteItem[] }[] = [
+const PALETTE_GROUPS: { title: string; dotColor: string; items: PaletteItem[] }[] = [
   {
     title: 'Sources',
+    dotColor: '#fbbf24',
     items: [
       { type: 'vdc', short: 'VDC', name: 'DC Voltage Source', accent: '#fbbf24' },
       { type: 'vac', short: 'VAC', name: 'AC Sine Source', accent: '#fbbf24' },
@@ -459,6 +466,7 @@ const PALETTE_GROUPS: { title: string; items: PaletteItem[] }[] = [
   },
   {
     title: 'Passive',
+    dotColor: '#22d3ee',
     items: [
       { type: 'resistor', short: 'R', name: 'Resistor (Ω)', accent: '#f1f5f9' },
       { type: 'potentiometer', short: 'POT', name: 'Potentiometer (Variable R)', accent: '#22d3ee' },
@@ -471,6 +479,7 @@ const PALETTE_GROUPS: { title: string; items: PaletteItem[] }[] = [
   },
   {
     title: 'Diodes',
+    dotColor: '#fb7185',
     items: [
       { type: 'diode', short: 'D', name: 'PN Junction Diode (1N4148)', accent: '#fb7185' },
       { type: 'zener', short: 'ZNR', name: 'Zener Voltage Reference Diode', accent: '#fb7185' },
@@ -480,6 +489,7 @@ const PALETTE_GROUPS: { title: string; items: PaletteItem[] }[] = [
   },
   {
     title: 'Transistors',
+    dotColor: '#a78bfa',
     items: [
       { type: 'bjt_npn', short: 'NPN', name: 'NPN Bipolar Junction Transistor', accent: '#fb7185' },
       { type: 'bjt_pnp', short: 'PNP', name: 'PNP Bipolar Junction Transistor', accent: '#fb7185' },
@@ -488,7 +498,8 @@ const PALETTE_GROUPS: { title: string; items: PaletteItem[] }[] = [
     ],
   },
   {
-    title: 'Active & Power',
+    title: 'Active',
+    dotColor: '#34d399',
     items: [
       { type: 'opamp', short: 'OPA', name: 'Operational Amplifier', accent: '#a78bfa' },
       { type: 'vswitch', short: 'SW', name: 'Voltage-Controlled Switch', accent: '#a78bfa' },
@@ -508,7 +519,6 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
   const [filter, setFilter] = useState('');
   const [hoveredType, setHoveredType] = useState<ComponentType | null>(null);
 
-  // Auto-clear search filter if a tutorial step highlights a component
   React.useEffect(() => {
     if (highlightedComponentType) {
       setFilter('');
@@ -524,9 +534,9 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
   return (
     <aside
       style={{
-        width: 148,
+        width: 156,
         flexShrink: 0,
-        background: 'var(--bg-panel)',
+        background: 'linear-gradient(180deg, #0d1424 0%, #090e1a 100%)',
         borderRight: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
@@ -541,15 +551,15 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '10px 8px',
+          padding: '10px 9px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 9,
+          gap: 10,
         }}
       >
         {/* Tools Section (2x2 Grid) */}
         <div>
-          <SectionLabel>Araçlar</SectionLabel>
+          <SectionLabel dotColor="#60a5fa">Araçlar</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
             <ToolButton
               active={toolMode === 'select'}
@@ -602,7 +612,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
             size={12}
             style={{
               position: 'absolute',
-              left: 8,
+              left: 9,
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'var(--text-muted)',
@@ -616,10 +626,10 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
             placeholder="Eleman ara..."
             style={{
               width: '100%',
-              padding: '5px 7px 5px 25px',
+              padding: '5px 8px 5px 27px',
               fontSize: 11.5,
-              borderRadius: 6,
-              background: 'var(--bg-app)',
+              borderRadius: 8,
+              background: 'rgba(7, 11, 20, 0.85)',
               border: '1px solid var(--border-subtle)',
             }}
           />
@@ -640,7 +650,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
 
           return (
             <div key={group.title}>
-              <SectionLabel>{group.title}</SectionLabel>
+              <SectionLabel dotColor={group.dotColor}>{group.title}</SectionLabel>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
                 {items.map((item) => {
                   const active = toolMode === 'place' && placingType === item.type;
@@ -648,22 +658,23 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
                   return (
                     <button
                       key={item.type}
+                      className={active || isHighlighted ? undefined : 'ns-tile'}
                       title={`${COMPONENT_GUIDE[item.type].title} — Yerleştirmek için tıklayın (R ile döndür)`}
                       onClick={() => onSelectPlacingType(item.type)}
                       onMouseEnter={() => setHoveredType(item.type)}
                       onMouseLeave={() => setHoveredType(null)}
                       style={{
                         position: 'relative',
-                        height: 31,
-                        borderRadius: 6,
+                        height: 32,
+                        borderRadius: 9,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         background: active
-                          ? 'rgba(34, 211, 238, 0.22)'
+                          ? 'linear-gradient(135deg, rgba(34, 211, 238, 0.24), rgba(59, 130, 246, 0.16))'
                           : isHighlighted
-                          ? 'rgba(52, 211, 153, 0.22)'
-                          : 'var(--bg-panel-alt)',
+                          ? 'rgba(52, 211, 153, 0.24)'
+                          : 'linear-gradient(180deg, rgba(22, 33, 56, 0.85), rgba(15, 23, 42, 0.9))',
                         border: `1.5px solid ${
                           active
                             ? 'var(--accent-cyan)'
@@ -671,12 +682,14 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
                             ? '#34d399'
                             : 'var(--border-subtle)'
                         }`,
-                        color: active ? 'var(--accent-cyan)' : isHighlighted ? '#fef08a' : item.accent,
+                        color: active ? '#67e8f9' : isHighlighted ? '#fef08a' : item.accent,
                         fontSize: 11.5,
                         fontWeight: 700,
                         fontFamily: 'var(--font-mono)',
                         letterSpacing: '-0.01em',
-                        transition: 'all 0.1s ease',
+                        boxShadow: active
+                          ? '0 0 12px rgba(34, 211, 238, 0.25)'
+                          : 'inset 0 1px 0 rgba(255, 255, 255, 0.04)',
                         animation: isHighlighted ? 'neonPulse 1.3s ease-in-out infinite' : undefined,
                       }}
                     >
@@ -687,15 +700,15 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
                             position: 'absolute',
                             top: -7,
                             right: -4,
-                            padding: '0 4px',
-                            borderRadius: 4,
+                            padding: '0 5px',
+                            borderRadius: 5,
                             fontSize: 8,
                             fontWeight: 800,
-                            background: '#34d399',
-                            color: '#051018',
+                            background: 'linear-gradient(135deg, #34d399, #22d3ee)',
+                            color: '#04111b',
                             letterSpacing: '0.03em',
-                            lineHeight: '13px',
-                            boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                            lineHeight: '14px',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
                           }}
                         >
                           SEÇ
@@ -710,67 +723,76 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
         })}
       </div>
 
-      {/* Beginner Hover / Active Component Info Card */}
-      <div
-        style={{
-          flexShrink: 0,
-          borderTop: '1px solid var(--border-strong)',
-          background: 'rgba(11, 15, 23, 0.96)',
-          padding: '9px 9px 10px',
-          minHeight: 112,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 5,
-        }}
-      >
-        {guideEntry ? (
-          <>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                fontSize: 11.5,
-                fontWeight: 700,
-                color: 'var(--accent-cyan)',
-                lineHeight: 1.25,
-              }}
-            >
-              <Lightbulb size={13} style={{ flexShrink: 0 }} />
-              <span>{guideEntry.title}</span>
+      {/* Glassmorphic Bottom "Bileşen Rehberi" Preview Card */}
+      <div style={{ flexShrink: 0, padding: '8px 8px 9px' }}>
+        <div
+          className="ns-card"
+          style={{
+            borderRadius: 10,
+            border: '1px solid rgba(34, 211, 238, 0.24)',
+            background: 'linear-gradient(180deg, rgba(18, 28, 48, 0.92), rgba(7, 11, 20, 0.96))',
+            padding: '9px 10px',
+            minHeight: 106,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 5,
+          }}
+        >
+          {guideEntry ? (
+            <>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  color: 'var(--accent-cyan)',
+                  lineHeight: 1.25,
+                }}
+              >
+                <Lightbulb size={13} style={{ flexShrink: 0 }} />
+                <span>{guideEntry.title}</span>
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                {guideEntry.shortDesc}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.38,
+                  fontStyle: 'italic',
+                  borderTop: '1px solid var(--border-subtle)',
+                  paddingTop: 4,
+                }}
+              >
+                {guideEntry.analogy}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.45 }}>
+              <div style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
+                Bileşen Rehberi
+              </div>
+              Herhangi bir elemanın üzerine gelin — ne işe yaradığını anında görün.
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-primary)', lineHeight: 1.4 }}>
-              {guideEntry.shortDesc}
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--text-secondary)',
-                lineHeight: 1.38,
-                fontStyle: 'italic',
-                borderTop: '1px solid var(--border-subtle)',
-                paddingTop: 4,
-              }}
-            >
-              {guideEntry.analogy}
-            </div>
-          </>
-        ) : (
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            <div style={{ fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>
-              Bileşen Rehberi
-            </div>
-            Herhangi bir elemanın üzerine gelin — ne işe yaradığını anında görün.
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </aside>
   );
 };
 
-const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const SectionLabel: React.FC<{ dotColor: string; children: React.ReactNode }> = ({
+  dotColor,
+  children,
+}) => (
   <div
     style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
       fontSize: 10.5,
       fontWeight: 700,
       textTransform: 'uppercase',
@@ -781,6 +803,16 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       fontFamily: 'var(--font-mono)',
     }}
   >
+    <span
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: dotColor,
+        boxShadow: `0 0 6px ${dotColor}88`,
+        flexShrink: 0,
+      }}
+    />
     {children}
   </div>
 );
@@ -797,24 +829,25 @@ const ToolButton: React.FC<{
   <button
     title={title}
     onClick={onClick}
+    className={active || highlighted ? undefined : 'ns-tile'}
     style={{
       position: 'relative',
-      height: 33,
-      borderRadius: 6,
+      height: 34,
+      borderRadius: 9,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 4,
       background: active
-        ? `${accent}24`
+        ? `${accent}26`
         : highlighted
-        ? 'rgba(52, 211, 153, 0.22)'
-        : 'var(--bg-panel-alt)',
+        ? 'rgba(52, 211, 153, 0.24)'
+        : 'linear-gradient(180deg, rgba(22, 33, 56, 0.85), rgba(15, 23, 42, 0.9))',
       border: `1.5px solid ${
         active ? accent : highlighted ? '#34d399' : 'var(--border-subtle)'
       }`,
       color: active ? accent : highlighted ? '#fef08a' : 'var(--text-secondary)',
-      transition: 'all 0.1s ease',
+      boxShadow: active ? `0 0 10px ${accent}33` : 'inset 0 1px 0 rgba(255,255,255,0.04)',
       animation: highlighted ? 'neonPulse 1.3s ease-in-out infinite' : undefined,
     }}
   >
@@ -826,15 +859,15 @@ const ToolButton: React.FC<{
           position: 'absolute',
           top: -7,
           right: -4,
-          padding: '0 4px',
-          borderRadius: 4,
+          padding: '0 5px',
+          borderRadius: 5,
           fontSize: 8,
           fontWeight: 800,
-          background: '#34d399',
-          color: '#051018',
+          background: 'linear-gradient(135deg, #34d399, #22d3ee)',
+          color: '#04111b',
           letterSpacing: '0.03em',
-          lineHeight: '13px',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+          lineHeight: '14px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
         }}
       >
         SEÇ

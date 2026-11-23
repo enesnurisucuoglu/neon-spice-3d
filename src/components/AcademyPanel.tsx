@@ -275,7 +275,7 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
             height: 7,
             width: '100%',
             borderRadius: 999,
-            background: 'var(--bg-app)',
+            background: 'rgba(7, 11, 20, 0.85)',
             overflow: 'hidden',
             border: '1px solid var(--border-subtle)',
           }}
@@ -284,7 +284,8 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
             style={{
               height: '100%',
               width: `${pct}%`,
-              background: 'linear-gradient(90deg, #a78bfa, #22d3ee, #34d399)',
+              background: 'linear-gradient(90deg, #22d3ee, #34d399)',
+              boxShadow: '0 0 10px rgba(34, 211, 238, 0.45)',
               borderRadius: 999,
               transition: 'width 0.25s ease',
             }}
@@ -306,9 +307,10 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
               fontSize: 12.5,
               fontFamily: 'var(--font-sans)',
               fontWeight: 600,
-              padding: '6px 9px',
-              background: 'var(--bg-app)',
+              padding: '6px 10px',
+              background: 'rgba(7, 11, 20, 0.82)',
               border: '1px solid var(--border-strong)',
+              borderRadius: 8,
               color: 'var(--text-primary)',
             }}
           >
@@ -331,12 +333,13 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
                 <button
                   key={lvl.id}
                   onClick={() => onSelectLevel(lvl)}
+                  className={isActive ? undefined : 'ns-btn'}
                   title={`Level ${lvl.id}: ${lvl.title}${isDone ? ' (Tutorial ✓)' : ''}${
                     isChallengeDone ? ' (Kendin Dene ★)' : ''
                   }`}
                   style={{
                     height: 31,
-                    borderRadius: 6,
+                    borderRadius: 8,
                     fontSize: 11.5,
                     fontWeight: 700,
                     fontFamily: 'var(--font-mono)',
@@ -345,20 +348,21 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
                     justifyContent: 'center',
                     gap: 2,
                     background: isActive
-                      ? 'rgba(34, 211, 238, 0.22)'
+                      ? 'linear-gradient(135deg, rgba(34,211,238,0.24), rgba(59,130,246,0.18))'
                       : isDone || isChallengeDone
                       ? 'rgba(52, 211, 153, 0.14)'
-                      : 'var(--bg-app)',
+                      : 'rgba(7, 11, 20, 0.72)',
                     border: `1.5px solid ${
                       isActive
                         ? '#22d3ee'
                         : isChallengeDone
                         ? '#fbbf24'
                         : isDone
-                        ? 'rgba(52, 211, 153, 0.55)'
+                        ? 'rgba(52, 211, 153, 0.5)'
                         : 'var(--border-subtle)'
                     }`,
-                    color: isActive ? '#22d3ee' : isDone ? '#34d399' : 'var(--text-secondary)',
+                    color: isActive ? '#67e8f9' : isDone ? '#34d399' : 'var(--text-secondary)',
+                    boxShadow: isActive ? '0 0 10px rgba(34, 211, 238, 0.25)' : 'none',
                   }}
                 >
                   <span>L{lvl.id}</span>
@@ -376,7 +380,7 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '12px 14px 18px',
+          padding: '13px 14px 18px',
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
@@ -387,27 +391,31 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
           style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: 4,
+            gap: 3,
             padding: 3,
-            borderRadius: 8,
-            background: 'var(--bg-app)',
+            borderRadius: 10,
+            background: 'rgba(7, 11, 20, 0.82)',
             border: '1px solid var(--border-subtle)',
           }}
         >
           <button
             onClick={() => onChangeMode('tutorial')}
+            className={mode === 'tutorial' ? undefined : 'ns-btn'}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 6,
               padding: '7px 6px',
-              borderRadius: 6,
-              fontSize: 12,
+              borderRadius: 7,
+              fontSize: 12.5,
               fontWeight: 700,
-              background: mode === 'tutorial' ? 'rgba(34, 211, 238, 0.2)' : 'transparent',
-              border: `1px solid ${mode === 'tutorial' ? 'rgba(34, 211, 238, 0.6)' : 'transparent'}`,
-              color: mode === 'tutorial' ? '#22d3ee' : 'var(--text-secondary)',
+              background:
+                mode === 'tutorial'
+                  ? 'linear-gradient(135deg, #22d3ee, #34d399)'
+                  : 'transparent',
+              color: mode === 'tutorial' ? '#04111b' : 'var(--text-secondary)',
+              boxShadow: mode === 'tutorial' ? '0 2px 10px rgba(34, 211, 238, 0.3)' : 'none',
             }}
           >
             <Compass size={14} />
@@ -416,18 +424,22 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
 
           <button
             onClick={() => onChangeMode('challenge')}
+            className={mode === 'challenge' ? undefined : 'ns-btn'}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 6,
               padding: '7px 6px',
-              borderRadius: 6,
-              fontSize: 12,
+              borderRadius: 7,
+              fontSize: 12.5,
               fontWeight: 700,
-              background: mode === 'challenge' ? 'rgba(251, 191, 36, 0.2)' : 'transparent',
-              border: `1px solid ${mode === 'challenge' ? 'rgba(251, 191, 36, 0.65)' : 'transparent'}`,
-              color: mode === 'challenge' ? '#fbbf24' : 'var(--text-secondary)',
+              background:
+                mode === 'challenge'
+                  ? 'linear-gradient(135deg, #f59e0b, #fbbf24)'
+                  : 'transparent',
+              color: mode === 'challenge' ? '#04111b' : 'var(--text-secondary)',
+              boxShadow: mode === 'challenge' ? '0 2px 10px rgba(245, 158, 11, 0.32)' : 'none',
             }}
           >
             <Flame size={14} />
@@ -666,6 +678,7 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
                     return (
                       <button
                         key={idx}
+                        className="ns-quiz-opt"
                         onClick={() => {
                           setSelectedQuizOption(idx);
                           if (idx === quiz.correctIndex) {
@@ -674,14 +687,13 @@ export const AcademyPanel: React.FC<AcademyPanelProps> = ({
                         }}
                         style={{
                           textAlign: 'left',
-                          padding: '8px 10px',
-                          borderRadius: 7,
+                          padding: '9px 11px',
+                          borderRadius: 8,
                           fontSize: 12.5,
                           lineHeight: 1.4,
                           background: bg,
                           border: `1px solid ${border}`,
                           color,
-                          transition: 'all 0.12s ease',
                         }}
                       >
                         <strong style={{ marginRight: 6, fontFamily: 'var(--font-mono)' }}>
