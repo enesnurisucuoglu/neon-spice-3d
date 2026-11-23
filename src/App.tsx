@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, GripHorizontal } from 'lucide-react';
 import {
   AnalysisConfig,
@@ -14,14 +14,23 @@ import {
   SimulationResult,
   Wire,
 } from './types/circuit';
+import { AcademyLevel, AcademyProgress } from './types/academy';
 import { compileNetlist, runSimulation, solveDCOP } from './engine';
 import { PRESET_CIRCUITS } from './circuits/presets';
+import {
+  ACADEMY_LEVELS,
+  getLevelById,
+  loadAcademyProgress,
+  saveAcademyProgress,
+} from './data/academyLevels';
 import { getComponentPrefix, getDefaultParams } from './utils/format';
 import { ComponentPalette, Toolbar, ViewMode } from './components/Toolbar';
 import { SchematicCanvas, SelectionTarget, ToolMode } from './components/SchematicCanvas';
 import { Circuit3DView } from './components/Circuit3DView';
 import { Oscilloscope } from './components/Oscilloscope';
 import { InspectorPanel } from './components/InspectorPanel';
+import { AcademyPanel } from './components/AcademyPanel';
+import { TutorialModal } from './components/TutorialModal';
 
 const PROBE_COLORS = ['#22d3ee', '#34d399', '#fbbf24', '#fb7185', '#a78bfa', '#60a5fa'];
 
@@ -37,6 +46,15 @@ function cloneSchematic(s: CircuitSchematic): CircuitSchematic {
       ac: { ...s.recommendedAnalysis.ac },
       dcSweep: { ...s.recommendedAnalysis.dcSweep },
     },
+  };
+}
+
+function cloneAnalysisConfig(c: AnalysisConfig): AnalysisConfig {
+  return {
+    type: c.type,
+    transient: { ...c.transient },
+    ac: { ...c.ac },
+    dcSweep: { ...c.dcSweep },
   };
 }
 
@@ -76,6 +94,18 @@ export default function App() {
   const [placingRotation, setPlacingRotation] = useState<Rotation>(0);
   const [selection, setSelection] = useState<SelectionTarget>(null);
 
+  // Academy & Tutorial UI states
+  const [academyOpen, setAcademyOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [academyProgress, setAcademyProgress] = useState<AcademyProgress>(() =>
+    loadAcademyProgress()
+  );
+
+  const activeLevel = useMemo(
+    () => getLevelById(academyProgress.currentLevelId) ?? ACADEMY_LEVELS[0],
+    [academyProgress.currentLevelId]
+  );
+
   // Simulation outputs
   const [netlist, setNetlist] = useState<CompiledNetlist | null>(null);
   const [simResult, setSimResult] = useState<SimulationResult | null>(null);
@@ -84,7 +114,7 @@ export default function App() {
   const [solveTimeMs, setSolveTimeMs] = useState<number | null>(null);
   const [runCounter, setRunCounter] = useState(0);
 
-  // Vertical split ratio for center pane (top SchematicCanvas %, bottom Oscilloscope %)
+  // Vertical split ratio for center pane (top 2D/3D %, bottom Oscilloscope %)
   const [splitRatio, setSplitRatio] = useState(0.56);
   const centerPaneRef = useRef<HTMLDivElement>(null);
   const isResizingRef = useRef(false);
@@ -128,6 +158,57 @@ export default function App() {
     executeSimulation(schematic, analysisConfig);
   }, [schematic, analysisConfig, runCounter, executeSimulation]);
 
+  // Load an Academy level starter circuit
+  const loadAcademyLevel = useCallback((level: AcademyLevel) => {
+    setSchematic(cloneSchematic(level.starterSchematic));
+    setAnalysisConfig(cloneAnalysisConfig(level.verificationAnalysis));
+    setSelection(null);
+    setToolMode('select');
+    setAcademyProgress((prev) => {
+      const next: AcademyProgress = {
+        ...prev,
+        currentLevelId: level.id,
+        lastUpdated: new Date().toISOString(),
+      };
+      saveAcademyProgress(next);
+      return next;
+    });
+  }, []);
+
+  const handleToggleAcademy = useCallback(() => {
+    setAcademyOpen((prevOpen) => {
+      const nextOpen = !prevOpen;
+      if (nextOpen && activeLevel) {
+        // Load active level circuit when opening Academy
+        setSchematic(cloneSchematic(activeLevel.starterSchematic));
+        setAnalysisConfig(cloneAnalysisConfig(activeLevel.verificationAnalysis));
+        setSelection(null);
+        setToolMode('select');
+      }
+      return nextOpen;
+    });
+  }, [activeLevel]);
+
+  const handleApplySolution = useCallback((level: AcademyLevel) => {
+    setSchematic(cloneSchematic(level.solutionSchematic));
+    setAnalysisConfig(cloneAnalysisConfig(level.verificationAnalysis));
+    setSelection(null);
+    setToolMode('select');
+  }, []);
+
+  const handleMarkLevelCompleted = useCallback((levelId: number) => {
+    setAcademyProgress((prev) => {
+      if (prev.completedIds.includes(levelId)) return prev;
+      const next: AcademyProgress = {
+        ...prev,
+        completedIds: [...prev.completedIds, levelId].sort((a, b) => a - b),
+        lastUpdated: new Date().toISOString(),
+      };
+      saveAcademyProgress(next);
+      return next;
+    });
+  }, []);
+
   // Preset switching & reset
   const handleSelectPreset = useCallback((id: string) => {
     const found = PRESET_CIRCUITS.find((p) => p.id === id);
@@ -140,13 +221,17 @@ export default function App() {
   }, []);
 
   const handleResetPreset = useCallback(() => {
+    if (academyOpen && activeLevel) {
+      loadAcademyLevel(activeLevel);
+      return;
+    }
     const found = PRESET_CIRCUITS.find((p) => p.id === schematic.id) ?? PRESET_CIRCUITS[0];
     const cloned = cloneSchematic(found);
     setSchematic(cloned);
     setAnalysisConfig(cloned.recommendedAnalysis);
     setSelection(null);
     setToolMode('select');
-  }, [schematic.id]);
+  }, [academyOpen, activeLevel, loadAcademyLevel, schematic.id]);
 
   // Schematic editing handlers
   const handleMoveComponent = useCallback((id: string, x: number, y: number) => {
@@ -257,10 +342,11 @@ export default function App() {
     setSelection((cur) => (cur && cur.kind === target.kind && cur.id === target.id ? null : cur));
   }, []);
 
-  // Keyboard shortcuts
+  // Global keyboard shortcuts (preserving WASD + Arrows for 3D PCB navigation!)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (
+        tutorialOpen ||
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
         e.target instanceof HTMLSelectElement
@@ -271,7 +357,8 @@ export default function App() {
       if (e.key === 'Escape') {
         setToolMode('select');
         setSelection(null);
-      } else if (e.key === 'w' || e.key === 'W') {
+      } else if ((e.key === 'w' || e.key === 'W') && (viewMode === '2d' || e.shiftKey)) {
+        // Bare 'w' only activates Wire tool in pure 2D mode so WASD always moves the 3D camera in 3D & Split views!
         setToolMode('wire');
       } else if (e.key === 'r' || e.key === 'R') {
         if (toolMode === 'place') {
@@ -288,9 +375,9 @@ export default function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [toolMode, selection, handleRotateComponent, handleDeleteTarget]);
+  }, [tutorialOpen, viewMode, toolMode, selection, handleRotateComponent, handleDeleteTarget]);
 
-  // Draggable split divider between SchematicCanvas and Oscilloscope
+  // Draggable split divider between Schematic/3D and Oscilloscope
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
       if (!isResizingRef.current || !centerPaneRef.current) return;
@@ -337,11 +424,16 @@ export default function App() {
         viewMode={viewMode}
         solveTimeMs={solveTimeMs}
         hasError={Boolean(simError)}
+        academyOpen={academyOpen}
+        academyCompletedCount={academyProgress.completedIds.length}
+        academyTotalCount={ACADEMY_LEVELS.length}
         onSelectPreset={handleSelectPreset}
         onSelectAnalysisType={handleSelectAnalysisType}
         onSelectViewMode={setViewMode}
         onRunSimulation={() => setRunCounter((c) => c + 1)}
         onResetPreset={handleResetPreset}
+        onToggleAcademy={handleToggleAcademy}
+        onOpenTutorial={() => setTutorialOpen(true)}
       />
 
       {/* Main Workbench Area */}
@@ -359,6 +451,22 @@ export default function App() {
             }
           }}
         />
+
+        {/* Docked 50-Level Interactive Electronics Academy Drawer */}
+        {activeLevel && (
+          <AcademyPanel
+            open={academyOpen}
+            levels={ACADEMY_LEVELS}
+            progress={academyProgress}
+            activeLevel={activeLevel}
+            currentSchematic={schematic}
+            onClose={() => setAcademyOpen(false)}
+            onSelectLevel={loadAcademyLevel}
+            onApplySolution={handleApplySolution}
+            onResetLevel={loadAcademyLevel}
+            onMarkCompleted={handleMarkLevelCompleted}
+          />
+        )}
 
         {/* Center Split Pane: 2D/3D Workspace (top) + Oscilloscope (bottom) */}
         <div
@@ -440,9 +548,9 @@ export default function App() {
               isResizingRef.current = true;
               document.body.style.cursor = 'row-resize';
             }}
-            title="Drag to resize Schematic / Oscilloscope split"
+            title="Şema / Osiloskop oranını sürükleyerek ayarlayın"
             style={{
-              height: 7,
+              height: 8,
               flexShrink: 0,
               background: 'var(--bg-panel)',
               borderTop: '1px solid var(--border-subtle)',
@@ -454,7 +562,7 @@ export default function App() {
               color: 'var(--text-muted)',
             }}
           >
-            <GripHorizontal size={14} />
+            <GripHorizontal size={15} />
           </div>
 
           {/* Bottom: Oscilloscope / Bode / DC Table */}
@@ -482,15 +590,15 @@ export default function App() {
       {/* Bottom Status Bar */}
       <footer
         style={{
-          height: 24,
+          height: 28,
           flexShrink: 0,
           background: simError ? 'rgba(159, 18, 57, 0.35)' : 'var(--bg-panel)',
           borderTop: `1px solid ${simError ? 'rgba(251, 113, 133, 0.45)' : 'var(--border-subtle)'}`,
-          padding: '0 12px',
+          padding: '0 14px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          fontSize: 11,
+          fontSize: 12,
           fontFamily: 'var(--font-mono)',
           color: 'var(--text-secondary)',
         }}
@@ -508,24 +616,33 @@ export default function App() {
                 textOverflow: 'ellipsis',
               }}
             >
-              <AlertCircle size={12} />
+              <AlertCircle size={13} />
               {simError}
             </span>
           ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--accent-emerald)' }}>
-              <CheckCircle2 size={12} />
-              Solver Ready · {netlist?.nodes.length ?? 0} nodes · {schematic.components.length} elements
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-emerald)' }}>
+              <CheckCircle2 size={13} />
+              SPICE Hazır · {netlist?.nodes.length ?? 0} düğüm · {schematic.components.length} eleman
             </span>
           )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--text-muted)', flexShrink: 0 }}>
-          <span>[W] Wire</span>
-          <span>[R] Rotate</span>
-          <span>[Del] Delete</span>
-          <span>[Esc] Select</span>
+          <span>{viewMode === '2d' ? '[W] Kablo' : '[WASD/Ok] 3D Hareket · [Shift+W] Kablo'}</span>
+          <span>[R] Döndür</span>
+          <span>[Del] Sil</span>
+          <span>[Esc] Seç</span>
         </div>
       </footer>
+
+      {/* 5-Step Quick Start Tutorial Modal */}
+      <TutorialModal
+        open={tutorialOpen}
+        onClose={() => setTutorialOpen(false)}
+        onOpenAcademy={() => {
+          if (!academyOpen) handleToggleAcademy();
+        }}
+      />
     </div>
   );
 }

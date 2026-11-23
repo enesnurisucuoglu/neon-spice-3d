@@ -10,6 +10,9 @@ import {
   AlertTriangle,
   Cpu,
   Radio,
+  Lightbulb,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   AnalysisConfig,
@@ -20,6 +23,7 @@ import {
   ProbeMarker,
 } from '../types/circuit';
 import { formatSICompact, parseSI } from '../utils/format';
+import { COMPONENT_GUIDE } from '../data/componentGuide';
 import { SelectionTarget } from './SchematicCanvas';
 
 export interface InspectorPanelProps {
@@ -236,6 +240,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<SidebarTab>('inspector');
   const [copied, setCopied] = useState(false);
+  const [guideExpanded, setGuideExpanded] = useState(true);
 
   const selectedComp =
     selection?.kind === 'component'
@@ -270,7 +275,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   return (
     <aside
       style={{
-        width: 320,
+        width: 344,
         flexShrink: 0,
         background: 'var(--bg-panel)',
         borderLeft: '1px solid var(--border-subtle)',
@@ -306,16 +311,16 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 6,
-                padding: '9px 6px',
-                fontSize: 12,
-                fontWeight: active ? 600 : 500,
+                padding: '10px 6px',
+                fontSize: 13,
+                fontWeight: active ? 700 : 500,
                 color: active ? 'var(--accent-cyan)' : 'var(--text-secondary)',
                 borderBottom: active ? '2px solid var(--accent-cyan)' : '2px solid transparent',
-                background: active ? 'rgba(34, 211, 238, 0.06)' : 'transparent',
+                background: active ? 'rgba(34, 211, 238, 0.08)' : 'transparent',
                 transition: 'all 0.12s ease',
               }}
             >
-              <Icon size={13} />
+              <Icon size={14} />
               {label}
             </button>
           );
@@ -328,6 +333,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           <>
             {/* Selected Component Inspector */}
             {selectedComp ? (
+              <>
               <SectionCard
                 title={`COMPONENT · ${selectedComp.type.toUpperCase()}`}
                 accent="var(--accent-cyan)"
@@ -439,7 +445,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 <div
                   style={{
                     marginTop: 4,
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     color: 'var(--text-muted)',
                     fontFamily: 'var(--font-mono)',
                   }}
@@ -447,6 +453,12 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   Grid: ({selectedComp.x}, {selectedComp.y}) · Rot: {selectedComp.rotation}°
                 </div>
               </SectionCard>
+              <BeginnerComponentGuideCard
+                guide={COMPONENT_GUIDE[selectedComp.type]}
+                expanded={guideExpanded}
+                onToggle={() => setGuideExpanded((v) => !v)}
+              />
+              </>
             ) : selectedProbe ? (
               <SectionCard
                 title="VOLTAGE PROBE"
@@ -822,7 +834,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               </span>
             </div>
 
-            <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
               {schematic.description}
             </p>
 
@@ -831,11 +843,11 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 style={{
                   background: 'var(--bg-app)',
                   border: '1px solid var(--border-subtle)',
-                  borderRadius: 7,
-                  padding: 12,
-                  fontSize: 12,
+                  borderRadius: 8,
+                  padding: 13,
+                  fontSize: 13,
                   lineHeight: 1.65,
-                  color: '#cbd5e1',
+                  color: '#e2e8f0',
                   whiteSpace: 'pre-wrap',
                   fontFamily: 'var(--font-sans)',
                 }}
@@ -843,8 +855,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 {schematic.theoryNotes}
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                No additional theory notes provided for this schematic.
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Bu devre için ek teori notu bulunmuyor.
               </div>
             )}
           </div>
@@ -853,6 +865,84 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
     </aside>
   );
 };
+
+const BeginnerComponentGuideCard: React.FC<{
+  guide: (typeof COMPONENT_GUIDE)[keyof typeof COMPONENT_GUIDE];
+  expanded: boolean;
+  onToggle: () => void;
+}> = ({ guide, expanded, onToggle }) => (
+  <div
+    style={{
+      background: 'linear-gradient(180deg, rgba(14, 116, 144, 0.16) 0%, rgba(15, 23, 42, 0.85) 100%)',
+      border: '1px solid rgba(34, 211, 238, 0.4)',
+      borderRadius: 9,
+      overflow: 'hidden',
+    }}
+  >
+    <button
+      onClick={onToggle}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '9px 11px',
+        background: 'rgba(34, 211, 238, 0.1)',
+        borderBottom: expanded ? '1px solid rgba(34, 211, 238, 0.25)' : 'none',
+        color: '#67e8f9',
+        fontSize: 12,
+        fontWeight: 700,
+        textAlign: 'left',
+      }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Lightbulb size={14} color="#22d3ee" />
+        Bu Eleman Ne İşe Yarar?
+      </span>
+      {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+    </button>
+
+    {expanded && (
+      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#f8fafc' }}>{guide.title}</div>
+        <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+          {guide.shortDesc}
+        </div>
+        <div
+          style={{
+            fontSize: 12.5,
+            color: '#bae6fd',
+            background: 'rgba(11, 15, 23, 0.55)',
+            borderLeft: '2px solid var(--accent-cyan)',
+            padding: '7px 9px',
+            borderRadius: '0 6px 6px 0',
+            lineHeight: 1.48,
+          }}
+        >
+          <strong>Benzetme:</strong> {guide.analogy}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Pinler:</strong> {guide.pins}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+          <strong style={{ color: 'var(--accent-emerald)' }}>Pratik İpucu:</strong> {guide.practicalTip}
+        </div>
+        <div
+          style={{
+            fontSize: 11.5,
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--accent-amber)',
+            background: 'rgba(11, 15, 23, 0.5)',
+            padding: '5px 8px',
+            borderRadius: 5,
+          }}
+        >
+          Tipik Değerler: {guide.typicalValues}
+        </div>
+      </div>
+    )}
+  </div>
+);
 
 const SectionCard: React.FC<{
   title: string;
@@ -873,16 +963,16 @@ const SectionCard: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '7px 10px',
+        padding: '8px 11px',
         borderBottom: '1px solid var(--border-subtle)',
         background: 'rgba(11, 15, 23, 0.45)',
       }}
     >
       <span
         style={{
-          fontSize: 10.5,
+          fontSize: 11.5,
           fontWeight: 700,
-          letterSpacing: '0.06em',
+          letterSpacing: '0.05em',
           color: accent,
           fontFamily: 'var(--font-mono)',
         }}
@@ -891,13 +981,13 @@ const SectionCard: React.FC<{
       </span>
       {actions}
     </div>
-    <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 9 }}>{children}</div>
+    <div style={{ padding: 11, display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
   </div>
 );
 
 const FieldRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+  <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+    <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
     {children}
   </label>
 );
@@ -912,10 +1002,10 @@ const IconActionButton: React.FC<{
     title={title}
     onClick={onClick}
     style={{
-      padding: 4,
+      padding: 5,
       borderRadius: 5,
       color: danger ? 'var(--accent-rose)' : 'var(--text-secondary)',
-      background: danger ? 'rgba(251, 113, 133, 0.1)' : 'var(--bg-hover)',
+      background: danger ? 'rgba(251, 113, 133, 0.12)' : 'var(--bg-hover)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -935,11 +1025,11 @@ const StatBadge: React.FC<{ icon: React.ReactNode; label: string; value: string 
       display: 'flex',
       alignItems: 'center',
       gap: 5,
-      padding: '4px 8px',
-      borderRadius: 5,
+      padding: '5px 9px',
+      borderRadius: 6,
       background: 'var(--bg-app)',
       border: '1px solid var(--border-subtle)',
-      fontSize: 11,
+      fontSize: 12,
       fontFamily: 'var(--font-mono)',
     }}
   >

@@ -264,10 +264,10 @@ export const Oscilloscope: React.FC<OscilloscopeProps> = ({ result, probes, erro
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 10,
-          padding: '6px 12px',
+          padding: '7px 14px',
           background: 'var(--bg-panel)',
           borderBottom: '1px solid var(--border-subtle)',
-          minHeight: 34,
+          minHeight: 38,
           flexWrap: 'wrap',
         }}
       >
@@ -277,26 +277,26 @@ export const Oscilloscope: React.FC<OscilloscopeProps> = ({ result, probes, erro
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
-              letterSpacing: '0.06em',
+              letterSpacing: '0.05em',
               color: 'var(--accent-cyan)',
               fontFamily: 'var(--font-mono)',
             }}
           >
             {result?.type === 'ac' ? (
-              <Waves size={13} />
+              <Waves size={14} />
             ) : result?.type === 'dc_op' ? (
-              <Gauge size={13} />
+              <Gauge size={14} />
             ) : (
-              <Activity size={13} />
+              <Activity size={14} />
             )}
             {modeLabel}
           </div>
 
           {/* Channel toggle pills */}
           {channels.length > 0 && result?.type !== 'dc_op' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {channels.map((ch) => {
                 const enabled = !hiddenChannels[ch.label];
                 const isSelected = selectedChannel === ch.label;
@@ -319,13 +319,13 @@ export const Oscilloscope: React.FC<OscilloscopeProps> = ({ result, probes, erro
                       display: 'flex',
                       alignItems: 'center',
                       gap: 5,
-                      padding: '2px 8px',
+                      padding: '3px 9px',
                       borderRadius: 999,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontFamily: 'var(--font-mono)',
                       fontWeight: 600,
                       opacity: enabled ? 1 : 0.4,
-                      background: isSelected && enabled ? `${ch.color}22` : 'var(--bg-app)',
+                      background: isSelected && enabled ? `${ch.color}24` : 'var(--bg-app)',
                       border: `1px solid ${isSelected && enabled ? ch.color : 'var(--border-strong)'}`,
                       color: enabled ? ch.color : 'var(--text-muted)',
                       transition: 'all 0.12s ease',
@@ -354,12 +354,12 @@ export const Oscilloscope: React.FC<OscilloscopeProps> = ({ result, probes, erro
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
-              fontSize: 11,
+              gap: 13,
+              fontSize: 12,
               fontFamily: 'var(--font-mono)',
             }}
           >
-            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{selectedChannel}:</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>{selectedChannel}:</span>
             <MetricItem label="Vpp" value={formatSI(transientMetrics.vpp, 'V', 2)} />
             <MetricItem label="Vrms" value={formatSI(transientMetrics.vrms, 'V', 2)} />
             <MetricItem label="Vmax" value={formatSI(transientMetrics.vmax, 'V', 2)} />
@@ -373,12 +373,12 @@ export const Oscilloscope: React.FC<OscilloscopeProps> = ({ result, probes, erro
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
-              fontSize: 11,
+              gap: 13,
+              fontSize: 12,
               fontFamily: 'var(--font-mono)',
             }}
           >
-            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{selectedChannel}:</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>{selectedChannel}:</span>
             <MetricItem label="Peak" value={`${acMetrics.peakDb.toFixed(2)} dB`} />
             <MetricItem label="f_peak" value={formatSI(acMetrics.peakFreq, 'Hz', 2)} />
             <MetricItem label="-3 dB" value={acMetrics.cutoffLabel} highlight />

@@ -344,14 +344,111 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
     });
     resizeObserver.observe(container);
 
-    // Animation loop for OrbitControls damping + live current-flow particles
+    // Keyboard navigation state (WASD + Arrow Keys + Q/E elevation)
+    const pressedKeys = new Set<string>();
+    const isEditableElement = (el: Element | null): boolean => {
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      return (el as HTMLElement).isContentEditable === true;
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isEditableElement(document.activeElement) || isEditableElement(e.target as Element | null)) {
+        return;
+      }
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (
+        key === 'ArrowUp' ||
+        key === 'ArrowDown' ||
+        key === 'ArrowLeft' ||
+        key === 'ArrowRight'
+      ) {
+        e.preventDefault();
+        pressedKeys.add(key);
+      } else if (key === 'w' || key === 'a' || key === 's' || key === 'd' || key === 'q' || key === 'e') {
+        pressedKeys.add(key);
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      pressedKeys.delete(key);
+    };
+
+    const onWindowBlur = () => {
+      pressedKeys.clear();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onWindowBlur);
+
+    // Animation loop for WASD/Arrow 3D navigation + OrbitControls damping + live current-flow particles
     const clock = new THREE.Clock();
     const dummy = new THREE.Object3D();
+    const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    const moveVec = new THREE.Vector3();
+    const upAxis = new THREE.Vector3(0, 1, 0);
+    let elapsed = 0;
     let rafId = 0;
 
     const animate = () => {
       rafId = requestAnimationFrame(animate);
-      const elapsed = clock.getElapsedTime();
+      const dt = Math.min(clock.getDelta(), 0.05);
+      elapsed += dt;
+
+      // Smooth dt-scaled horizontal XZ glide + Q/E elevation
+      if (pressedKeys.size > 0) {
+        const fwdInput =
+          (pressedKeys.has('w') || pressedKeys.has('ArrowUp') ? 1 : 0) -
+          (pressedKeys.has('s') || pressedKeys.has('ArrowDown') ? 1 : 0);
+        const strafeInput =
+          (pressedKeys.has('d') || pressedKeys.has('ArrowRight') ? 1 : 0) -
+          (pressedKeys.has('a') || pressedKeys.has('ArrowLeft') ? 1 : 0);
+        const elevInput = (pressedKeys.has('e') ? 1 : 0) - (pressedKeys.has('q') ? 1 : 0);
+
+        const distToTarget = camera.position.distanceTo(controls.target);
+        const panSpeed = Math.max(6.5, Math.min(28, distToTarget * 0.72));
+
+        if (fwdInput !== 0 || strafeInput !== 0) {
+          camera.getWorldDirection(forward);
+          forward.y = 0;
+          if (forward.lengthSq() > 1e-6) {
+            forward.normalize();
+          } else {
+            // Fallback when looking straight down in Top view
+            forward.set(0, 1, 0).applyQuaternion(camera.quaternion);
+            forward.y = 0;
+            if (forward.lengthSq() > 1e-6) {
+              forward.normalize();
+            } else {
+              forward.set(0, 0, -1);
+            }
+          }
+          right.crossVectors(forward, upAxis).normalize();
+
+          moveVec.set(0, 0, 0);
+          if (fwdInput !== 0) moveVec.addScaledVector(forward, fwdInput);
+          if (strafeInput !== 0) moveVec.addScaledVector(right, strafeInput);
+          if (moveVec.lengthSq() > 1e-6) {
+            moveVec.normalize().multiplyScalar(panSpeed * dt);
+            camera.position.add(moveVec);
+            controls.target.add(moveVec);
+          }
+        }
+
+        if (elevInput !== 0) {
+          const elevSpeed = Math.max(4.5, Math.min(18, distToTarget * 0.48));
+          const requestedDy = elevInput * elevSpeed * dt;
+          const clampedCamY = Math.max(1.0, Math.min(60, camera.position.y + requestedDy));
+          const actualDy = clampedCamY - camera.position.y;
+          camera.position.y = clampedCamY;
+          controls.target.y = Math.max(0.0, controls.target.y + actualDy);
+        }
+      }
 
       controls.update();
 
@@ -393,6 +490,9 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
     return () => {
       cancelAnimationFrame(rafId);
       resizeObserver.disconnect();
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onWindowBlur);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
       controls.dispose();
@@ -715,28 +815,29 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
           left: 10,
           display: 'flex',
           alignItems: 'center',
-          gap: 5,
-          padding: '4px 6px',
-          borderRadius: 8,
-          background: 'rgba(11, 15, 23, 0.78)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
+          gap: 6,
+          padding: '5px 8px',
+          borderRadius: 9,
+          background: 'rgba(10, 15, 26, 0.88)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(148, 163, 184, 0.32)',
+          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.45)',
         }}
       >
         <span
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 4,
-            fontSize: 10,
+            gap: 5,
+            fontSize: 11,
             fontFamily: 'var(--font-mono)',
-            fontWeight: 700,
-            color: 'var(--accent-cyan)',
+            fontWeight: 800,
+            color: '#22d3ee',
             padding: '0 4px',
+            letterSpacing: '0.04em',
           }}
         >
-          <Eye size={11} />
+          <Eye size={13} />
           3D LAB
         </span>
 
@@ -753,7 +854,7 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
           active={autoOrbit}
           accent="#22d3ee"
           onClick={() => setAutoOrbit((v) => !v)}
-          icon={<Orbit size={11} />}
+          icon={<Orbit size={12} />}
         />
 
         <HudButton
@@ -762,7 +863,7 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
             setAutoOrbit(false);
             applyCameraPreset('iso');
           }}
-          icon={<RotateCcw size={10} />}
+          icon={<RotateCcw size={12} />}
         />
       </div>
 
@@ -774,17 +875,17 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
           right: 10,
           display: 'flex',
           alignItems: 'center',
-          gap: 5,
-          padding: '4px 6px',
-          borderRadius: 8,
-          background: 'rgba(11, 15, 23, 0.78)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(148, 163, 184, 0.2)',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
+          gap: 6,
+          padding: '5px 8px',
+          borderRadius: 9,
+          background: 'rgba(10, 15, 26, 0.88)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(148, 163, 184, 0.32)',
+          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.45)',
         }}
       >
         {/* PCB Soldermask Theme Swatches */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {(Object.values(PCB_THEMES) as PCBThemeConfig[]).map((t) => {
             const active = pcbTheme === t.id;
             return (
@@ -795,24 +896,26 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 4,
-                  padding: '3px 6px',
-                  borderRadius: 5,
-                  fontSize: 10,
-                  fontWeight: active ? 700 : 500,
+                  gap: 5,
+                  padding: '5px 8px',
+                  borderRadius: 6,
+                  fontSize: 11,
+                  fontWeight: active ? 700 : 600,
                   fontFamily: 'var(--font-mono)',
-                  color: active ? '#f8fafc' : '#94a3b8',
-                  background: active ? 'rgba(34, 211, 238, 0.16)' : 'transparent',
-                  border: `1px solid ${active ? 'rgba(34, 211, 238, 0.55)' : 'transparent'}`,
+                  color: active ? '#ffffff' : '#cbd5e1',
+                  background: active ? 'rgba(34, 211, 238, 0.24)' : 'rgba(30, 41, 59, 0.5)',
+                  border: `1px solid ${active ? 'rgba(34, 211, 238, 0.75)' : 'rgba(148, 163, 184, 0.22)'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.12s ease',
                 }}
               >
                 <span
                   style={{
-                    width: 8,
-                    height: 8,
+                    width: 9,
+                    height: 9,
                     borderRadius: '50%',
                     background: t.swatch,
-                    border: '1px solid rgba(255,255,255,0.45)',
+                    border: '1px solid rgba(255,255,255,0.6)',
                     display: 'inline-block',
                   }}
                 />
@@ -829,7 +932,7 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
           active={thermalMode}
           accent="#fb923c"
           onClick={() => setThermalMode((v) => !v)}
-          icon={<Flame size={11} />}
+          icon={<Flame size={12} />}
         />
 
         <HudButton
@@ -837,69 +940,79 @@ export const Circuit3DView: React.FC<Circuit3DViewProps> = ({
           active={showCurrentFlow}
           accent="#34d399"
           onClick={() => setShowCurrentFlow((v) => !v)}
-          icon={<Activity size={11} />}
+          icon={<Activity size={12} />}
         />
       </div>
 
-      {/* Bottom-Left FLIR Thermal Legend when Thermal Cam is active */}
-      {thermalMode && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 10,
-            left: 10,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '5px 10px',
-            borderRadius: 7,
-            background: 'rgba(11, 15, 23, 0.85)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(251, 146, 60, 0.45)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            color: '#f8fafc',
-          }}
-        >
-          <span style={{ color: '#fb923c', fontWeight: 700 }}>FLIR POWER</span>
-          <span style={{ color: '#94a3b8' }}>0 mW</span>
-          <div
-            style={{
-              width: 96,
-              height: 8,
-              borderRadius: 4,
-              background:
-                'linear-gradient(90deg, #0c1445 0%, #4c1d95 25%, #be185d 50%, #ea580c 75%, #facc15 92%, #fef9c3 100%)',
-            }}
-          />
-          <span style={{ color: '#fef08a' }}>100+ mW</span>
-        </div>
-      )}
-
-      {/* Subtle Bottom-Right Interaction Hint */}
+      {/* Bottom-Left Stack: FLIR Thermal Legend (optional) + Navigation Controls Glass Badge */}
       <div
         style={{
           position: 'absolute',
           bottom: 10,
-          right: 10,
-          padding: '3px 8px',
-          borderRadius: 6,
-          background: 'rgba(11, 15, 23, 0.65)',
-          border: '1px solid rgba(148, 163, 184, 0.14)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9.5,
-          color: '#64748b',
+          left: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          gap: 6,
           pointerEvents: 'none',
         }}
       >
-        Drag: Orbit · Right-Drag: Pan · Scroll: Zoom · Click Part: Inspect
+        {thermalMode && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '5px 11px',
+              borderRadius: 7,
+              background: 'rgba(10, 15, 26, 0.9)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(251, 146, 60, 0.55)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10.5,
+              color: '#f8fafc',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <span style={{ color: '#fb923c', fontWeight: 700 }}>FLIR POWER</span>
+            <span style={{ color: '#cbd5e1' }}>0 mW</span>
+            <div
+              style={{
+                width: 96,
+                height: 8,
+                borderRadius: 4,
+                background:
+                  'linear-gradient(90deg, #0c1445 0%, #4c1d95 25%, #be185d 50%, #ea580c 75%, #facc15 92%, #fef9c3 100%)',
+              }}
+            />
+            <span style={{ color: '#fef08a', fontWeight: 600 }}>100+ mW</span>
+          </div>
+        )}
+
+        <div
+          style={{
+            padding: '5px 11px',
+            borderRadius: 8,
+            background: 'rgba(10, 15, 26, 0.86)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(34, 211, 238, 0.35)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            fontWeight: 600,
+            color: '#e2e8f0',
+            letterSpacing: '0.01em',
+          }}
+        >
+          WASD / ↑↓←→ Gezin • Sürükle: Döndür • Tekerlek: Yaklaş
+        </div>
       </div>
     </div>
   );
 };
 
 const HudDivider: React.FC = () => (
-  <div style={{ width: 1, height: 14, background: 'rgba(148, 163, 184, 0.22)' }} />
+  <div style={{ width: 1, height: 18, background: 'rgba(148, 163, 184, 0.32)' }} />
 );
 
 const HudButton: React.FC<{
@@ -914,15 +1027,17 @@ const HudButton: React.FC<{
     style={{
       display: 'flex',
       alignItems: 'center',
-      gap: 4,
-      padding: '3px 7px',
-      borderRadius: 5,
-      fontSize: 10.5,
-      fontWeight: active ? 700 : 500,
+      gap: 5,
+      padding: '5px 10px',
+      borderRadius: 6,
+      fontSize: 11.5,
+      fontWeight: active ? 700 : 600,
       fontFamily: 'var(--font-mono)',
-      color: active ? accent : '#cbd5e1',
-      background: active ? `${accent}24` : 'rgba(30, 41, 59, 0.45)',
-      border: `1px solid ${active ? `${accent}88` : 'rgba(148, 163, 184, 0.16)'}`,
+      color: active ? '#ffffff' : '#e2e8f0',
+      background: active ? `${accent}33` : 'rgba(30, 41, 59, 0.72)',
+      border: `1px solid ${active ? accent : 'rgba(148, 163, 184, 0.3)'}`,
+      boxShadow: active ? `0 0 10px ${accent}44` : 'none',
+      cursor: 'pointer',
       transition: 'all 0.12s ease',
     }}
   >
